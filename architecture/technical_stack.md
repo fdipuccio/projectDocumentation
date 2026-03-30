@@ -1,1 +1,1 @@
-
+Python, FastAPI, PostgreSQL, JWT
