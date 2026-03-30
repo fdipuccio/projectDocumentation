@@ -2,66 +2,52 @@ MODULE: PM
 VERSION: 1
 
 ## 1. Obiettivo
-Definire in modo rigoroso e chiaro i requisiti funzionali e tecnici per la realizzazione di un prodotto/software/servizio richiesto, a partire dai requirement e dallo stack tecnologico forniti, in modo da produrre una specifica implementabile e riutilizzabile dai team tecnici enterprise.
+Definire e chiarire i requisiti funzionali e non funzionali del progetto, strutturare lo scope minimo necessario per il rilascio MVP e organizzare le attività tecniche necessarie per l’implementazione. Il fine è creare una specifica tecnica formalizzata e facilmente interpretabile dal team di sviluppo, assicurando chiarezza su vincoli, assunzioni e criteri di accettazione.
 
 ## 2. Contesto e vincoli
-- Contesto enterprise con necessità di conformità a standard di sicurezza, performance e scalabilità.
-- Sistema e stack tecnologico pre-esistente da integrare o su cui sviluppare nuove funzionalità.
-- Limitazioni tecnologiche dovute al stack attuale o a policy interne.
-- Necessità di chiarezza assoluta per evitare ambiguità in fase di sviluppo.
-- Coordinamento cross-team e dipendenza da risorse terze potrebbero influenzare tempi e rilasci.
+Si opera in un ambiente enterprise con necessità di rispetto di standard di sicurezza, performance e compliance. Il progetto deve integrarsi con sistemi esistenti e adottare la tecnologia corrente dell’organizzazione. Risorse limitate richiedono un MVP ben circoscritto. I vincoli includono tempi definiti, compatibilità con stack tecnologici attuali e requisiti di scalabilità.
 
 ## 3. Assunzioni
-- I requirement forniti sono completi e aggiornati al momento dell’analisi.
-- Lo stack tecnologico descritto è corretto e rappresenta l’ambiente corrente.
-- Non sono previste modifiche o estensioni al stack tecnologico a breve termine.
-- I team di sviluppo hanno competenze adeguate sugli strumenti e tecnologie specificate.
-- Eventuali requisiti non presenti nei documenti iniziali non verranno introdotti senza formale richieste di change management.
+- I requisiti ricevuti sono completi ma possono contenere ambiguità da chiarire.
+- Il team tecnico ha competenze sullo stack tecnologico indicato.
+- Le integrazioni con sistemi esterni sono già definite e disponibili.
+- Il budget e i tempi per il MVP sono fissati esternamente e non modificabili.
+- Non verranno introdotte nuove tecnologie se non espressamente richiesto.
 
 ## 4. Scope MVP
-- Analisi dettagliata e documentazione riutilizzabile dei requirement attuali.
-- Chiarimento e definizione di tutte le ambiguità presenti nel requisito.
-- Identificazione e dettaglio tecnico dei task necessari alla realizzazione.
-- Definizione precisa dei criteri di accettazione per ogni requisito.
-- Limitazione al perimetro funzionale e tecnico indicato nei requirement senza estensioni.
+- Implementazione delle funzionalità core definite nei requirement forniti.
+- Adozione della tecnologia e infrastruttura esistenti.
+- Realizzazione di un flusso utente base per il rilascio funzionante.
+- Documentazione tecnica essenziale per manutenzione futura.
+- Setup di ambiente di test e procedure di validazione.
 
 ## 5. Out of scope
-- Implementazione effettiva del prodotto o modulo.
-- Modifiche al stack tecnologico esistente.
-- Gestione di change request non documentate.
-- Testing e validazione operativa oltre la definizione dei criteri di accettazione.
-- Attività di formazione o supporto post-rilascio.
+- Funzionalità avanzate o secondarie non descritte nei requisiti iniziali.
+- Refactoring o upgrade dell’attuale stack tecnologico.
+- Attività di marketing o coinvolgimento di stakeholder esterni.
+- Supporto post-rilascio oltre il bug fixing critico.
 
 ## 6. Task tecnici ordinati
-1. Raccogliere e consolidare tutti i requirement e la documentazione tecnica esistente.
-2. Analisi dettagliata degli ambiti funzionali richiesti.
-3. Revisione e validazione dello stack tecnologico indicato.
-4. Identificazione di eventuali gap o incompatibilità tra requirement e tecnologia.
-5. Definizione delle dipendenze tecniche e dei vincoli esistenti.
-6. Scomposizione dei requirement in task tecnici granulari.
-7. Stesura della documentazione di specifica includendo:
-   - Obiettivi
-   - Assunzioni
-   - Vincoli
-   - Task tecnici
-   - Criteri di accettazione
-   - Rischi e punti aperti
-8. Revisione interna e con stakeholder per validazione.
-9. Consegna della specifica finale ai team di sviluppo.
+1. Analisi dettagliata dei requirement ricevuti e risoluzione di ambiguità.
+2. Definizione dell’architettura tecnica e design di alto livello.
+3. Preparazione ambiente di sviluppo e test.
+4. Sviluppo delle funzionalità core secondo specifiche.
+5. Revisione del codice e testing unitario.
+6. Integrazione e collaudo funzionale end-to-end.
+7. Preparazione documentazione tecnica e di deployment.
+8. Validazione finale con team QA e stakeholder.
+9. Release MVP in ambiente di produzione controllato.
 
 ## 7. Acceptance criteria
-- Tutti i requirement dichiarati sono tracciati e commentati.
-- Le ambiguità riscontrate sono tutte identificate e riportate.
-- Task tecnici sono definiti in modo chiaro, sequenziato e senza sovrapposizioni.
-- Criteri di accettazione coprono tutti i casi limite e normali di utilizzo.
-- Documentazione approvata dai principali stakeholder tecnici e di business.
-- Conferma che non vi siano gap tecnologici o funzionali irrisolti all’interno dell’ambito stabilito.
+- Tutte le funzionalità core sono implementate e conformi ai requisiti.
+- Nessun bug critico aperto al momento del rilascio.
+- Approvazione formale da parte del team QA post testing.
+- Documentazione tecnica completa e aggiornata.
+- Rilascio in ambiente di produzione senza regressioni.
 
 ## 8. Rischi e punti aperti
-- Ambiguità o incompletezze non evidenziate nei requirement di partenza.
-- Cambiamenti di requirement in fase di analisi.
-- Dipendenze esterne non note o non gestibili.
-- Incompletezza della documentazione tecnica dello stack.
-- Limitazioni dello stack tecnologico non comunicate.
-- Inadeguatezza delle risorse o competenze tecnico-specialistiche.
-- Ritardi nelle revisioni e approvazioni da stakeholder.
+- Ambiguità non totalmente chiarite nei requisiti potrebbero causare ritardi.
+- Possibili limitazioni o incompatibilità dello stack tecnologico esistente.
+- Dipendenza da sistemi esterni per integrazioni con potenziali problemi di disponibilità.
+- Rischio di sovraccarico delle risorse se le stime temporali non fossero accurate.
+- Necessità di definire con precisione metriche di performance e sicurezza.
