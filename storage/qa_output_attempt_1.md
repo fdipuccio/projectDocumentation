@@ -3,44 +3,70 @@ VERSION: 1
 FINAL_STATUS: APPROVED_WITH_CHANGES
 
 ## Requisiti coperti
-- Implementazione delle funzionalità core per la fruizione del modulo PM conforme ai requisiti MVP.
-- Architettura tecnica chiara e ben modulata, rispettosa delle linee guida enterprise.
-- Solida integrazione con sistemi legacy tramite API standard già identificate.
-- Rispetto delle policy di sicurezza, con uso di JWT per autenticazione e autorizzazione.
-- Persistenza dati su PostgreSQL con ORM, garantendo manutenibilità e sicurezza.
-- Setup dell’ambiente di sviluppo e test previsto, incluse pipeline CI/CD per test automatici.
-- Documentazione tecnica prevista per API, configurazione e uso manutentivo.
-- Gestione errori centralizzata e logging strutturato.
-- Strategia di test articolata e copertura minima definita (>80%).
-- Pianificazione dettagliata del piano di implementazione con momenti di review e verifica.
+- Implementazione backend RESTful con FastAPI per autenticazione utenti (registrazione, login, reset password base, endpoint protetti).
+- Utilizzo di PostgreSQL come database relazionale con gestione tramite ORM (SQLAlchemy) e migrazioni (Alembic).
+- Password memorizzate in forma hashata con algoritmo sicuro (bcrypt).
+- Login con rilascio di token JWT firmati, con claims standard e durata configurabile.
+- Endpoint protetti mediante dipendenze FastAPI che verificano validità token JWT dall’header Authorization.
+- Funzionalità reset password base mediante generazione di token reset univoco salvato in DB, senza integrazione email.
+- Gestione errori coerente con standard HTTP e risposte JSON standardizzate.
+- Documentazione API generata automaticamente da FastAPI (OpenAPI).
+- Test unitari e integrati previsti a copertura delle funzionalità e sicurezza di base.
+- Architettura modulare, chiara divisione tra livelli di responsabilità (API Layer, Application Layer, Data Layer, Security Layer).
+- Gestione corretta di validazioni input su email e password secondo specifica.
+- Evitamento di funzionalità out of scope (MFA, ruoli, invio email/reset avanzato).
+- Struttura file organizzata e conforme a best practice.
 
 ## Requisiti mancanti
-- Specifiche e dettagli tecnici completi dello stack tecnologico da coordinare con le policy interne e team di infrastruttura non ancora definiti.
-- Dettagli non esplicitati sulle performance e scalabilità richieste, benché menzionato come necessario in spec. PM.
-- Mancanza di un piano di test per la sicurezza più approfondito: oltre all’autenticazione JWT non ci sono riferimenti a test di penetrazione, vulnerabilità o compliance.
-- Limitata attenzione ai dettagli riguardanti l’integrazione con sistemi legacy complessi o potenzialmente problematici, essendo solo accennata una gestione di retry e circuito breaker "leggeri".
-- Assenza di indicazioni esplicite per gestione e pianificazione dei rischi legati alle dipendenze da team o fornitori esterni.
+- Specifica e parametri definiti per configurazione e gestione della durata e claims JWT (attualmente indicata come "da definire internamente", sarebbe preferibile esplicitarla nel piano per evitare ambiguità).
+- Mancanza di dettagli su gestione della revoca di token JWT o meccanismi per invalidare sessioni prima della scadenza.
+- Non è chiaramente definito se la durata token reset password e il meccanismo di invalidazione siano parametrici o hardcoded.
+- Mancanza di definizione esplicita per messaggi utente e formato errori di autenticazione in relazione alla UX.
+- Mancanza di documentazione o suggerimenti su come gestire logging o auditing, anche se out of scope, potrebbe essere utile una roadmap futura.
+- Non esplicita la strategia di gestione configurazioni sensibili (ad es. variabili d’ambiente per chiavi JWT, parametri DB) nel codice o in separate configurazioni.
+- Assenza di un meccanismo di limitazione tentativi login (rate limiting, lockout account) per mitigare attacchi brute force.
+- Non menzione esplicita di gestione time zone per timestamps (creazione utente, scadenza token) che può influenzare consistenza dati.
+- Non sono descritti meccanismi specifici per il testing di edge case (es. concurrent token reset, attacchi replay).
 
 ## Rischi e problemi
-- Requisiti PM potenzialmente incompleti o ambigui richiedono chiarimenti continui, rischio di estensioni fuori MVP.
-- Mancanza di definizione precisa sulle performance e test di sicurezza potrebbe condurre a rilascio non ottimale.
-- Integrazione con sistemi legacy con possibili problemi non documentati può generare blocchi o malfunzionamenti.
-- Possibili criticità nella definizione dello stack e conformità alle policy aziendali non completamente chiarita.
-- Vincoli di risorse e tempi non dichiarati, rischio di compromissione della qualità o della completezza.
-- Scarsa definizione sulle modalità di gestione dei segreti JWT e sicurezza dell’infrastruttura runtime.
+- Rischio di sicurezza nell’esposizione del token reset password nella risposta API o via log senza un canale di distribuzione protetto (out of scope ma potenzialmente critico se non documentato).
+- Assenza di meccanismo di revoca token JWT può compromettere la sicurezza in casi di furto token.
+- Gestione errori deve essere rigorosamente isolata per evitare leak di informazioni sensibili (cosa prevista, ma va monitorata in implementazione).
+- Dipendenza dalla configurazione ambientale (chiavi JWT, connessione DB) non dettagliata potrebbe comportare rischi di errata configurazione in produzione.
+- Mancanza di controllo rate limit per login e reset password potrebbe esporre il sistema a tentativi di abuso o Denial of Service.
+- Mancanza di audit log e monitoraggio limitano la capacità di investigare incidenti.
+- Ambiguità nella definizione dei claims JWT e durata potrebbe portare a incoerenze tra team di sviluppo e gestione infrastruttura.
+- La gestione della validazione dei input è solo “minima”; la mancanza di controlli su complessità password riduce la sicurezza generale.
+- Mancanza di gestione timezone e dati timestamp può portare a problemi su validità token reset e scadenze.
 
 ## Test suggeriti
-- Test di penetrazione e analisi di vulnerabilità per il backend e API, oltre agli attuali test funzionali.
-- Stress test e test di carico per valutare la scalabilità e performance di base, non solo funzionali.
-- Test di integrazione approfonditi con simulazione di scenari di errore e interruzioni nella comunicazione con sistemi legacy.
-- Review della security compliance con audit su gestione token, cifratura chiavi e politiche di accesso.
-- Test di regressione per assicurare che l’integrazione del modulo non impatti altri sistemi esistenti.
-- Test end-to-end, coinvolgendo anche eventuale integrazione con frontend e orchestrazione complessiva, in fase successiva al MVP.
+- Test unitari per funzioni di hashing password (con bcrypt), generazione e validazione token JWT, e generazione/invalidate token reset.
+- Test integrati completi per endpoint:
+  - Registrazione: dati validi, email duplicata, email non valida, password troppo corta.
+  - Login: credenziali corrette, errate, mancanza campi, token JWT rilasciato e verificato.
+  - Endpoint protetto: accesso con token valido, token scaduto, token non presente, token malformato.
+  - Reset password: richiesta token con email valida e non esistente, modifica password con token valido scaduto o invalidato.
+- Test di sicurezza base:
+  - Verifica che password non venga mai inclusa nelle risposte API.
+  - Verifica che il token JWT sia firmato e valido solo nel periodo definito.
+  - Simulazione di attacco con token reset duplicati o tentativi di reuse.
+- Test di carico minimo per verificare comportamento del sistema con più richieste concorrenti su registrazione e login.
+- Test di conformità alla documentazione OpenAPI generata.
+- Test negativi su formati input non conformi.
+- Test di comportamento errori HTTP coerenti con specifica (ad es. 401, 400, 422).
 
 ## Azioni richieste
-- Integrare la proposta tecnica con una definizione più dettagliata dello stack tecnologico in accordo con il team interno di infrastruttura e sicurezza.
-- Definire e formalizzare dettagli e criteri di performance e test di sicurezza da eseguire prima del rilascio.
-- Rafforzare le strategie di gestione del rischio circa le integrazioni legacy e le dipendenze esterne.
-- Pianificare un’analisi più approfondita con il Product Owner e stakeholder per chiarire eventuali requisiti ambigui e garantire la completezza.
-- Documentare e formalizzare la gestione sicura delle chiavi JWT e segreti associati nell’ambiente di produzione.
-- Considerare l’estensione futura del piano test includendo anche scenari di failover e resilienza del sistema.
+- Definire e documentare esplicitamente la configurazione dei parametri JWT (durata, claims usati) in modo univoco e condiviso.
+- Integrare una strategia o indicazione futura per gestione revoca token JWT e politiche di sicurezza per sessioni.
+- Prevedere o pianificare meccanismi di rate limiting su login e reset password come protezione base contro attacchi brute force.
+- Esplicitare la gestione sicura e documentata del token reset password, specialmente come e dove il token è esposto o trasmesso al client.
+- Introdurre linee guida di gestione e validazione input più restrittive per password, considerando anche futuri upgrade.
+- Documentare gestione configurazioni ambiente in modo che sia chiara la separazione dei segreti, specialmente chiavi JWT e credenziali DB.
+- Pianificare implementazione di logging minimo ed eventuale auditing anche se out of scope, per facilitare troubleshooting e sicurezza.
+- Chiarire e documentare gestione timestamps e time zone in database per coerenza temporale validità token.
+- Definire messaggistica standard per errori auth per garantire miglior UX e sicurezza (non rivelare cause dettagliate di fallimento login).
+- Assicurare che il piano test includa edge case su token reset e concorrenza.
+- Prevedere revisione post-implementazione per validare sicurezza e gestione errori in ambiente reale/test.
+
+In conclusione, la proposta tecnica è molto solida e aderente alla specifica MVP, coprendo in modo completo le funzionalità richieste e organizzazione modulare. Tuttavia si rendono necessarie alcune precisazioni e miglioramenti, soprattutto su aspetti di sicurezza, configurazione e gestione token, per garantire robustezza e evitare rischi operativi.  
+Per questi motivi, il giudizio finale è APPROVED_WITH_CHANGES.
