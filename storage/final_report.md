@@ -8,208 +8,261 @@
 {'project_type': 'backend', 'needs_backend': True, 'needs_frontend': False, 'needs_database': True, 'backend_complexity': 'low', 'integration_level': 'low', 'backend_type': 'api'}
 
 ## PM Output
-MODULE: PM  
-VERSION: 1  
+MODULE: PM
+VERSION: 1
 
-## 1. Obiettivo  
-Analizzare i requisiti funzionali e lo stack tecnologico forniti per definire una specifica chiara e dettagliata che possa guidare il team tecnico nella fase di sviluppo, assicurando la coerenza con gli obiettivi di business e i vincoli tecnici identificati.
+## 1. Obiettivo
+Definire in modo rigoroso e chiaro i requisiti funzionali e tecnici per la realizzazione di un prodotto/software/servizio richiesto, a partire dai requirement e dallo stack tecnologico forniti, in modo da produrre una specifica implementabile e riutilizzabile dai team tecnici enterprise.
 
-## 2. Contesto e vincoli  
-- L’analisi si basa esclusivamente sui requisiti e sulle informazioni relative allo stack tecnologico attualmente presentati; non saranno introdotti requisiti aggiuntivi non esplicitamente indicati.  
-- Il contesto di destinazione è enterprise, con necessità di rigorosità formale nelle definizioni e considerazione di eventuali politiche di sicurezza e compliance implicite.  
-- Lo stack tecnologico ha vincoli specifici di compatibilità e integrazione (dettagli forniti nella documentazione tecnica allegata).  
-- I tempi per la definizione della specifica devono essere compatibili con il ciclo di rilascio previsto, ma non sono stati forniti dettagli temporali.  
-- Eventuali ambiguità riscontrate devono essere segnalate e chiarite prima dell’avvio dello sviluppo.  
+## 2. Contesto e vincoli
+- Contesto enterprise con necessità di conformità a standard di sicurezza, performance e scalabilità.
+- Sistema e stack tecnologico pre-esistente da integrare o su cui sviluppare nuove funzionalità.
+- Limitazioni tecnologiche dovute al stack attuale o a policy interne.
+- Necessità di chiarezza assoluta per evitare ambiguità in fase di sviluppo.
+- Coordinamento cross-team e dipendenza da risorse terze potrebbero influenzare tempi e rilasci.
 
-## 3. Assunzioni  
-- I requisiti forniti sono completi e rappresentano le sole funzionalità da sviluppare per l’MVP.  
-- Lo stack tecnologico comunicato è già validato e utilizzabile da parte del team di sviluppo.  
-- Le integrazioni con sistemi esterni saranno realizzate tramite API standard definite nello stack; eventuali dettagli di tali API saranno forniti separatamente.  
-- Non sono previste personalizzazioni o adattamenti dello stack tecnologico per l’MVP.  
-- I dati di input necessari all’applicazione saranno disponibili nel formato e frequenza previsti nei requisiti.  
+## 3. Assunzioni
+- I requirement forniti sono completi e aggiornati al momento dell’analisi.
+- Lo stack tecnologico descritto è corretto e rappresenta l’ambiente corrente.
+- Non sono previste modifiche o estensioni al stack tecnologico a breve termine.
+- I team di sviluppo hanno competenze adeguate sugli strumenti e tecnologie specificate.
+- Eventuali requisiti non presenti nei documenti iniziali non verranno introdotti senza formale richieste di change management.
 
-## 4. Scope MVP  
-- Definizione dettagliata delle funzionalità core secondo i requisiti forniti.  
-- Precisione nelle specifiche dei flussi applicativi con individuazione delle dipendenze tecnologiche.  
-- Identificazione dei task tecnico-operativi necessari allo sviluppo secondo lo stack tecnologico previsto.  
-- Redazione di criteri di accettazione misurabili e condivisibili per validare le funzionalità.  
-- Segnalazione chiara di ogni ambiguità o mancanza di dettaglio riscontrata nei requisiti o nello stack.  
+## 4. Scope MVP
+- Analisi dettagliata e documentazione riutilizzabile dei requirement attuali.
+- Chiarimento e definizione di tutte le ambiguità presenti nel requisito.
+- Identificazione e dettaglio tecnico dei task necessari alla realizzazione.
+- Definizione precisa dei criteri di accettazione per ogni requisito.
+- Limitazione al perimetro funzionale e tecnico indicato nei requirement senza estensioni.
 
-## 5. Out of scope  
-- Sviluppo o implementazione del codice.  
-- Testing funzionale o di performance.  
-- Gestione incidenti o manutenzione post-rilascio.  
-- Definizione di requisiti non espressamente comunicati.  
-- Adozione o modifica dello stack tecnologico esistente.  
+## 5. Out of scope
+- Implementazione effettiva del prodotto o modulo.
+- Modifiche al stack tecnologico esistente.
+- Gestione di change request non documentate.
+- Testing e validazione operativa oltre la definizione dei criteri di accettazione.
+- Attività di formazione o supporto post-rilascio.
 
-## 6. Task tecnici ordinati  
-1. Analisi completa dei requisiti funzionali disponibili.  
-2. Mappatura del flusso funzionale rispetto allo stack tecnologico.  
-3. Identificazione dei moduli e componenti tecnologici coinvolti.  
-4. Definizione degli input/output attesi per ogni componente.  
-5. Specifica dei task tecnici elementari necessari allo sviluppo (es. configurazioni, integrazioni, deployment).  
-6. Validazione interna della coerenza tecnica e funzionale della specifica.  
-7. Documentazione delle ambiguità o incompletezze da chiarire con gli stakeholder.  
-8. Stesura dei criteri di accettazione per ogni requisito incluso nell’MVP.  
+## 6. Task tecnici ordinati
+1. Raccogliere e consolidare tutti i requirement e la documentazione tecnica esistente.
+2. Analisi dettagliata degli ambiti funzionali richiesti.
+3. Revisione e validazione dello stack tecnologico indicato.
+4. Identificazione di eventuali gap o incompatibilità tra requirement e tecnologia.
+5. Definizione delle dipendenze tecniche e dei vincoli esistenti.
+6. Scomposizione dei requirement in task tecnici granulari.
+7. Stesura della documentazione di specifica includendo:
+   - Obiettivi
+   - Assunzioni
+   - Vincoli
+   - Task tecnici
+   - Criteri di accettazione
+   - Rischi e punti aperti
+8. Revisione interna e con stakeholder per validazione.
+9. Consegna della specifica finale ai team di sviluppo.
 
-## 7. Acceptance criteria  
-- La specifica deve coprire tutti i requisiti funzionali indicati per l’MVP senza omissioni.  
-- Ogni funzionalità deve essere associata a task tecnici chiari e rispettare le capacità dello stack tecnologico.  
-- Le ambiguità identificate devono essere documentate e discusse con gli stakeholder.  
-- I criteri di accettazione devono essere espressi in modo univoco e verificabile.  
-- La documentazione deve essere comprensibile e adeguata a un team tecnico enterprise, facilitando lo sviluppo senza bisogno di ulteriori interpretazioni.  
+## 7. Acceptance criteria
+- Tutti i requirement dichiarati sono tracciati e commentati.
+- Le ambiguità riscontrate sono tutte identificate e riportate.
+- Task tecnici sono definiti in modo chiaro, sequenziato e senza sovrapposizioni.
+- Criteri di accettazione coprono tutti i casi limite e normali di utilizzo.
+- Documentazione approvata dai principali stakeholder tecnici e di business.
+- Conferma che non vi siano gap tecnologici o funzionali irrisolti all’interno dell’ambito stabilito.
 
-## 8. Rischi e punti aperti  
-- Possibili ambiguità o incompletezze nei requisiti che potrebbero impattare sulla definizione tecnica.  
-- Mancanza di dettagli su alcune componenti tecnologiche specifiche o sulle integrazioni con sistemi esterni.  
-- Presenza di vincoli non esplicitati relativi a sicurezza, compliance o performance.  
-- Scarsa documentazione sullo stack che potrebbe rallentare la mappatura funzionale.  
-- Necessità di conferma formale degli stakeholder su tutte le assunzioni effettuate.
+## 8. Rischi e punti aperti
+- Ambiguità o incompletezze non evidenziate nei requirement di partenza.
+- Cambiamenti di requirement in fase di analisi.
+- Dipendenze esterne non note o non gestibili.
+- Incompletezza della documentazione tecnica dello stack.
+- Limitazioni dello stack tecnologico non comunicate.
+- Inadeguatezza delle risorse o competenze tecnico-specialistiche.
+- Ritardi nelle revisioni e approvazioni da stakeholder.
 
 ## Backend Output
 MODULE: BACKEND
 VERSION: 1
 
 ## 1. Obiettivo backend
-Progettare e specificare una soluzione backend API RESTful basata su Python e FastAPI per garantire la gestione CRUD delle risorse definite dal MVP, con persistenza dati su PostgreSQL. La soluzione deve prevedere un sistema di autenticazione e autorizzazione tramite JWT, integrare solide policy di sicurezza e compliance implicite in ambito enterprise, garantendo un’architettura modulare, scalabile e facilmente manutenibile. La specifica deve essere chiara e completa per supportare il team di sviluppo senza ambiguità, rispecchiando fedelmente i requisiti funzionali e tecnici definiti.
+Realizzare un backend API sicuro, scalabile e performante, conforme ai requisiti enterprise esposti, basato su Python/FastAPI e PostgreSQL, che esponga funzionalità CRUD per la gestione dati necessari, assicuri autenticazione e autorizzazione tramite JWT, e integri funzionalità con il sistema esistente minimizzando il rischio di incompatibilità. La soluzione deve essere chiara, modulare e facilmente estendibile dai team tecnici, e fornire tracciabilità completa dei requirement, criteri di accettazione e task implementativi per garantirne l’aderenza agli obiettivi.
 
 ## 2. Assunzioni tecniche
-- Lo stack tecnologico Python 3.x, FastAPI, PostgreSQL e JWT è validato, stabile e utilizzabile per l’MVP senza necessità di personalizzazioni.  
-- Le risorse backend gestite sono quelle descritte nei requisiti funzionali MVP, senza espansioni o modifiche.  
-- I dati di input saranno forniti nei formati e frequenze specificati, senza richiedere trasformazioni complesse.  
-- Le integrazioni esterne si basano su API standard di cui si attendono ancora specifiche dettagliate e che verranno incorporate successivamente.  
-- Il team ha limiti di esperienza su FastAPI e JWT, pertanto sono previsti momenti di formazione tecnica per mitigare rischi di implementazione e qualità.  
-- Sono impliciti requisiti di sicurezza enterprise quali logging avanzato, audit trail e controlli di accesso, che saranno formalizzati e garantiti tramite configurazioni e best practice.  
-- Non sono previste modifiche allo stack tecnologico, né personalizzazioni sull’infrastruttura di deployment, che seguirà comunque pratiche standard enterprise (alta disponibilità, backup, monitoring).
+- Requirement e stack tecnologico definiti e stabili (Python, FastAPI, PostgreSQL, JWT).
+- Team di sviluppo con competenze avanzate su Python e FastAPI.
+- Infrastruttura di database PostgreSQL disponibile e configurata secondo standard enterprise.
+- JWT gestito in modalità sicura con chiavi rotate e protocolli comuni.
+- Non sono previste modifiche allo stack tecnologico per la durata del progetto.
+- Gli input e output seguono formati e validazioni specificate.
+- Non sarà trattata la parte frontend né la modifica o estensione del sistema legacy.
 
 ## 3. Architettura backend
-L’architettura sarà modularmente stratificata a “livelli” per favorire la separazione delle responsabilità e la manutenibilità:
-
-- **API Layer:** Gestione degli endpoint REST tramite FastAPI, che espone gli handler per ciascuna risorsa e funzionalità.  
-- **Service Layer:** Contiene la business logic applicativa, valida input, gestisce regole di sicurezza e orchestrazione.  
-- **Data Access Layer (DAL):** Interazione con PostgreSQL tramite ORM o query parametrizzate, gestione transazioni e persistenza.  
-- **Security Layer:** Gestione autenticazione JWT, autorizzazione a livello di endpoint e risorsa, logging sicuro delle operazioni.  
-- **Utilità:** Moduli di supporto per configurazioni, gestione errori, logging centralizzato e monitoring.
-
-Questa architettura consentirà di isolare componenti, facilitare test unitari e integrazione, e preparare la base per eventuali evoluzioni post-MVP.
+Il sistema si architetta su tre livelli logici:
+- **API Layer (FastAPI):** gestione richieste HTTP, autenticazione, routing e validazioni input/output.
+- **Business Logic Layer:** contenente la logica di dominio e le regole di elaborazione dati.
+- **Data Persistence Layer:** interazione con PostgreSQL tramite ORM/Query builder (es. SQLAlchemy), garantendo pattern repository per astrazione.
+I moduli saranno modulari e indipendenti, con interfacce chiare e servizi registrati tramite dependency injection su FastAPI. La sicurezza JWT sarà gestita centralmente con middleware o dipendenze integrate. Gestione degli errori conforme a standard REST, con codifica uniforme e log accurato.
 
 ## 4. Moduli e responsabilità
-- **api:** Definizione degli endpoint FastAPI (es. auth, resource), parsing e validazione base dei dati ricevuti, orchestrazione chiamate al service layer.  
-- **services:** Implementazione della logica di business, validazione dettagliata, gestione permessi, manipolazione dati nel rispetto delle regole enterprise.  
-- **repositories:** Accesso ai dati tramite ORM (es. SQLAlchemy) o query dirette, gestione transazioni con PostgreSQL, CRUD su tabelle definite.  
-- **security:** Gestione token JWT, validazione autenticità e autorizzazione, refresh token, gestione ruoli e permessi.  
-- **errors:** Definizione e gestione centralizzata delle eccezioni, mapping errori interni a risposte API coerenti e sicure.  
-- **config:** Moduli di configurazione centralizzata per ambiente, database, logging, sicurezza e parametri runtime.  
-- **logging:** Infrastruttura per logging strutturato, audit trail delle azioni critiche e monitoraggio runtime.  
+- **AuthModule:** gestione autenticazione/autorizzazione tramite JWT, login/logout, refresh token e verifica permessi.
+- **UserModule (esempio):** CRUD utenti con validazioni e controlli di integrità.
+- **DataModule:** CRUD entità business core, versione e validazione dati.
+- **ErrorHandlingModule:** gestione coerente di errori e eccezioni, mappatura in risposte HTTP.
+- **DatabaseModule:** configurazione connessione e transaction management con PostgreSQL.
+- **ValidationModule:** definizione e applicazione regole di validazione DTO e modelli.
+- **LoggingModule:** uniforme raccolta e salvataggio log di sistema, errori e accessi.
+- **MonitoringModule (facoltativo):** raccolta metriche e health check endpoint.
 
 ## 5. API principali
-Endpoint concreti conformi allo stack FastAPI e requisiti MVP (nomi e risorse da validare definiti in fase di dettaglio requisiti):
+- **POST /auth/login**  
+  Input: credenziali (username, password)  
+  Output: access token JWT, refresh token  
+  Funzione: autenticazione utente
 
-- **POST /auth/login:** Autenticazione utente, restituisce JWT e refresh token.  
-- **POST /auth/refresh:** Rigenera il token di accesso usando il refresh token valido.  
-- **GET /resources/**: Recupero lista risorse disponibili per l’utente autenticato (paginazione prevista).  
-- **POST /resources/**: Creazione di una nuova risorsa (convalida dati e autorizzazioni).  
-- **GET /resources/{id}:** Dettaglio di una singola risorsa (con controllo permessi).  
-- **PUT /resources/{id}:** Aggiornamento dati di una risorsa esistente.  
-- **DELETE /resources/{id}:** Cancellazione logica o fisica della risorsa (a seconda del requisito).  
-- **GET /health:** Endpoint di health-check per monitoraggio e deployment.
+- **POST /auth/refresh**  
+  Input: refresh token  
+  Output: nuovo access token e refresh token
 
-Questi endpoint saranno definiti a dominio e adattati alle risorse specifiche appena confermate dagli stakeholder.
+- **GET /users/**  
+  Output: lista utenti (protetta, paginata)
+
+- **POST /users/**  
+  Input: dati nuovo utente  
+  Output: utente creato
+
+- **GET /users/{id}**  
+  Output: dettaglio utente
+
+- **PUT /users/{id}**  
+  Input: dati aggiornati utente  
+  Output: utente aggiornato
+
+- **DELETE /users/{id}**  
+  Funzione: rimozione utente
+
+- **GET /data/**  
+  Output: elenco risorse business principali (CRUD)
+
+- **POST /data/**  
+  Input: nuovo record business
+
+- **GET /data/{id}**  
+- **PUT /data/{id}**  
+- **DELETE /data/{id}**
+
+- **GET /health**  
+  Verifica stato sistema e DB
+
+Ogni endpoint rispetta vincoli sicurezza ed è validato.
 
 ## 6. Business logic
-- Validazione avanzata degli input e rispetto delle regole di business per ogni operazione CRUD.  
-- Controllo restrittivo di autorizzazioni basato su ruoli e permessi JWT, verifica su ogni risorsa richiesta.  
-- Gestione sicura dei token JWT: validazione, scadenze, blacklist in caso di logout o revoca.  
-- Tracciamento audit delle operazioni sensibili con log strutturati.  
-- Gestione degli errori e rollback transazionali in caso di fallimenti critici.  
-- Orchestrazione di chiamate interne/multipli componenti per flussi applicativi complessi eventualmente previsti.
+La logica applicativa si focalizza su:
+- Validazioni complesse lato server su dati in ingresso.
+- Controllo integrità e relazioni dati nel database.
+- Gestione transazioni nel database per coerenza.
+- Controlli di sicurezza tramite ruoli e permessi legati a token JWT.
+- Mappature degli errori coerenti e restituite agli utenti in modo uniforme.
+- Gestione refresh token per sessioni utente continuative.
+- Preparazione e trasformazione dati per rispondere agli endpoint nel formato previsto.
 
 ## 7. Persistenza e integrazioni
-- Archiviazione dati mediante PostgreSQL, struttura dati normalizzata e indicizzata secondo i requisiti.  
-- Utilizzo ORM (preferibilmente SQLAlchemy) per astrazione e facilitazione manipolazione dati, con query ottimizzate.  
-- Gestione transazioni e integrità referenziale.  
-- Predisposizione di connessioni sicure e configurabili per database in ambiente enterprise.  
-- Integrazione con sistemi esterni tramite API REST standard non ancora dettagliate, con moduli adapter isolati nello stack.
+- PostgreSQL via ORM (es. SQLAlchemy) con sessione e connessione gestite centralmente.
+- Modelli dati definiti con schemi espliciti e indici ottimizzati per performance.
+- Strategie di connection pooling configurate sulla base del carico previsto.
+- Backup e restore database fuori scope ma previsti da policy di infrastruttura.
+- Integrazione con eventuali sistemi esterni limitata a livelli di API, mediante chiamate sincrone o asincrone - fuori ambito attuale salvo chiarimenti.
+- Gestione corretta di eventuali errori di connessione e fallback parziali definiti.
 
 ## 8. Autenticazione e autorizzazione
-- Implementazione di autenticazione stateless tramite JWT con firme sicure e scadenze gestite.  
-- Supporto refresh token per mantenere sessioni utente senza ri-login frequenti.  
-- Middleware FastAPI per validazione token su ogni richiesta protetta.  
-- Sistema ruolo/permessi per autorizzazione granulare ad accesso e operazioni sulle risorse codificate nella business logic.  
-- Protezione contro attacchi comuni (es. token replay, brute force) con policy di sicurezza.  
-- Logging e auditing centralizzato delle operazioni di autenticazione.
+- Autenticazione stateless tramite JWT firmati con algoritmo sicuro (es. HS256 o RS256).
+- Validazione token su ogni richiesta protetta con controllo scadenza, integrità e revoca.
+- Gestione refresh token per rinnovo sicuro di sessioni.
+- Ruoli e permessi codificati e verificati a livello applicativo, documentati.
+- Scenari di revoca token valutati con lista nera o meccanismi revoca centralizzati (es. Redis).
+- Architettura modulare per inserire future evoluzioni di autorizzazione (es. OAuth2).
+- Attenzione alla protezione da attacchi comuni (token replay, brute force).
 
 ## 9. Gestione errori
-- Centralizzazione della gestione errori tramite handler FastAPI personalizzati.  
-- Mappatura degli errori a risposte HTTP precise e coerenti (400 per input invalidi, 401/403 per problemi di sicurezza, 404 risorsa non trovata, 500 errori interni).  
-- Registrazione dettagliata degli errori per debugging e traccia compliance.  
-- Risposte API uniformi che consentano al frontend o sistemi integrati di interpretare esattamente gli stati.  
-- Controlli di validità e fallback per prevenire crash indesiderati.
+- Uniformità nel formato della risposta errori (codice, messaggio, dettagli opzionali).
+- Errori suddivisi in tipologie: client (400), autenticazione (401), autorizzazione (403), not found (404), conflict (409), server (500).
+- Middleware o interceptor per intercettare eccezioni e tradurle in risposte HTTP standard.
+- Log di errori critici con tracciamento stack e contesto.
+- Validazione input che produce errori descrittivi e localizzabili.
+- Criteri di fallback o retry limitati, documentati.
+- Per errori di database gestione transazioni rollback e risposta coerente.
 
 ## 10. Strategia di test backend
-- Copertura estesa (>80%) di test unitari su moduli core (business logic, autenticazione, persistiti).  
-- Test di integrazione mirati per endpoint API, inclusa interazione con DB PostgreSQL in ambiente containerizzato simile a produzione.  
-- Test sicurezza specifici su autenticazione JWT, autorizzazione, gestione permessi e protezione endpoint.  
-- Simulazioni di errori e verifica robustezza del sistema di gestione errori e logging.  
-- Test basici di carico e stress in condizioni realistiche per validare performance di base e stabilità.  
-- Integrazione di pipeline CI con esecuzione automatica dei test e reportistica.
+- **Unit test:** copertura API, logica di business, validazioni, autenticazione.
+- **Integration test:** test end-to-end con DB test, verifica interazione tra moduli e stack completo.
+- **Acceptance test:** basati su criteri di accettazione formali tracciati per ogni requisito.
+- **Test di sicurezza:** verifica robustezza JWT, tentativi di accesso non autorizzato, revoca token.
+- **Test di performance:** load test su DB e API per conformità a SLA.
+- **Test di regressione automatizzati** integrati in pipeline CI/CD per garantire stabilità.
+- **Test di errore e input invalidi:** simulazioni casi limite.
+- Checklist e matrici di tracciamento test-requisiti per copertura completa.
 
 ## 11. Rischi tecnici
-- Ambiguità residue nella definizione precisa delle risorse e flussi applicativi possono influenzare la correttezza della realizzazione.  
-- Dipendenza da specifiche API esterne ancora da ricevere che potrebbero richiedere riadattamenti.  
-- Potenziale sottovalutazione di requisiti impliciti di sicurezza e compliance enterprise non formalizzati.  
-- Capacità del team limitata su FastAPI e JWT con conseguente rischio ritardi o problemi qualitativi.  
-- Documentazione dello stack incompleta che potrebbe rallentare la mappatura e l’implementazione.  
-- Necessità di formazione tecnica e supporto per mitigare gap competenze.
+- Ambiguità residue e incompletezza dei requirement non formalmente eliminate in primo ciclo.
+- Gap e dipendenze tecniche cross-team non completamente identificati.
+- Rischi sicurezza JWT legati a revoca token e gestione chiavi.
+- Potenziali skill gap nel team su tecnologie e best practice sicurezza.
+- Dipendenza critica da PostgreSQL senza piano dettagliato fallback.
+- Possibili ritardi e rallentamenti in fase di revisione e approvazione della specifica.
+- Cambiamenti di requisito non formalmente gestiti nel change management.
+- Rischio di non completa tracciabilità requirement-task critico per compliance e controllo.
 
 ## 12. Struttura file proposta
 ```
-/backend
- ├── api/
- │    ├── __init__.py
- │    ├── auth.py                   # endpoint autenticazione
- │    ├── resources.py              # endpoint CRUD risorse
- │    └── health.py                 # endpoint health check
- ├── services/
- │    ├── __init__.py
- │    ├── auth_service.py
- │    ├── resource_service.py
- │    └── permission_service.py
- ├── repositories/
- │    ├── __init__.py
- │    ├── db.py                    # configurazione e sessioni DB
- │    ├── resource_repository.py
- │    └── user_repository.py
- ├── security/
- │    ├── __init__.py
- │    ├── jwt_handler.py
- │    └── permissions.py
- ├── errors/
- │    ├── __init__.py
- │    └── handlers.py
- ├── config/
- │    ├── __init__.py
- │    ├── settings.py              # variabili ambiente, config runtime
- │    └── logging_config.py
- ├── logging/
- │    └── audit_logger.py
- ├── tests/
- │    ├── unit/
- │    ├── integration/
- │    └── security/
- ├── main.py                      # punto di ingresso FastAPI
- └── README.md
+/backend_project/
+│
+├── app/
+│   ├── main.py                        # FastAPI app entrypoint
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py            # gestione autenticazione
+│   │   │   │   ├── users.py           # API utenti
+│   │   │   │   ├── data.py            # API business data
+│   │   │   │   ├── health.py          # health check endpoint
+│   │   ├── dependencies.py            # DI per moduli, servizi
+│   ├── core/
+│   │   ├── config.py                  # configurazioni app
+│   │   ├── security.py                # JWT, crittografia, autorizzazioni
+│   │   ├── logging.py                 # setup logging
+│   ├── models/
+│   │   ├── user.py                   # modelli SQLAlchemy
+│   │   ├── data_models.py
+│   ├── schemas/
+│   │   ├── user_schema.py            # Pydantic DTO
+│   │   ├── data_schema.py
+│   ├── services/
+│   │   ├── auth_service.py
+│   │   ├── user_service.py
+│   │   ├── data_service.py
+│   ├── db/
+│   │   ├── session.py               # gestione connessioni DB
+│   │   ├── base.py                  # base ORM
+│   ├── exceptions/
+│   │   ├── handlers.py              # error handling
+│   │   ├── custom_exceptions.py
+│   ├── tests/
+│       ├── unit/
+│       ├── integration/
+│       ├── acceptance/
+│
+├── alembic/                        # migrazioni DB
+├── requirements.txt
+├── README.md
+├── docker-compose.yml
+├── Dockerfile
+├── .env.example
 ```
 
 ## 13. Piano di implementazione
-1. **Raccolta dettagli e formalizzazione criteri di accettazione:** Confermare con gli stakeholder risorse, flussi applicativi, policy di sicurezza e requisiti integrativi per compliance. Formalizzare criteri di accettazione univoci e misurabili.  
-2. **Definizione completa degli endpoint API:** Finalizzare nomi risorse, payload, response e autorizzazioni in accordo con requisiti MVP definiti.  
-3. **Progettazione e binding moduli:** Realizzare l’architettura e struttura file, sviluppare moduli base API, servizi, repository e sicurezza con logging e gestione errori.  
-4. **Implementazione autenticazione e autorizzazione JWT:** Configurare middleware, gestione token, permessi e auditing conforme best practice enterprise.  
-5. **Setup ambiente di test e sviluppo:** Definire ambienti containerizzati per test DB, integrare pipeline CI con esecuzione test unitari, integrazione e sicurezza.  
-6. **Esecuzione test, correzione bug e ottimizzazione:** Validare coerenza funzionale e performance di base, affinare gestione errori e logging secondo feedback QA.  
-7. **Documentazione tecnica dettagliata:** Completare manuali tecnici per sviluppo, deployment e manutenzione, integrazione con documentazione cluster aziendale.  
-8. **Formazione e supporto al team:** Organizzare sessioni su FastAPI, JWT e best practice sicurezza per mitigare gap competenze e accelerare avvio sviluppo.
+1. **Raccolta e validazione dettagliata requirement:** integrazione delle analisi di ambiguità, gap e definizione criteri di accettazione tracciati. Revisione formale con stakeholder.
+2. **Definizione dettagliata della struttura dati, modelli e schema DB:** mapping con requirement e validazioni.
+3. **Sviluppo moduli core:** autenticazione JWT, API CRUD principali, gestione errori e configurazione DB.
+4. **Scrittura test automatici:** unit, integration e acceptance con checklist basata sui criteri di accettazione definiti.
+5. **Revisione intermedia codice e test con team e stakeholder:** raccolta feedback, identificazione rischi residui e mitigazione.
+6. **Rilascio ambiente staging con monitoraggio performance e sicurezza:** test di carico e sicurezza JWT.
+7. **Finalizzazione documentazione tecnica, matrice tracciamento e piano di change management.**
+8. **Preparazione passaggio in produzione con training rapido risorse tecniche su moduli sviluppati.**
 
 ## QA Output
 MODULE: QA  
@@ -217,40 +270,49 @@ VERSION: 1
 FINAL_STATUS: APPROVED_WITH_CHANGES
 
 ## Requisiti coperti  
-- La proposta tecnica backend copre integralmente i requisiti funzionali core indicati per l’MVP come da specifica PM, considerando la gestione delle funzionalità CRUD, autenticazione, autorizzazione, gestione errori e persistenza dati.  
-- È presente una chiara definizione dell’architettura a livelli con separazione dei moduli, conforme allo stack tecnologico Python/FastAPI/PostgreSQL e alle richieste di sicurezza tramite JWT.  
-- I task tecnici sono dettagliati, coerenti e prevedono le configurazioni necessarie per sviluppo, integrazione e deployment in contesto enterprise.  
-- Le ambiguità proprie dei requisiti sono state identificate e dichiarate in modo trasparente.  
-- Criteri di accettazione impliciti sono gestiti tramite la definizione della logica, protezione degli endpoint e test di unità e integrazione.  
-- La proposta include una strategia di testing articolata su unit e integration test, con attenzione alla copertura e qualità del codice.  
-- È documentata una struttura di progetto organizzata e modulare adatta all’ambiente enterprise, facilitando la manutenzione e scalabilità.  
+- Obiettivo backend chiaramente definito, conforme al contesto enterprise e ai requisiti di sicurezza, performance e scalabilità.  
+- Stack tecnologico coerente e specificato (Python, FastAPI, PostgreSQL, JWT), con assunzioni esplicite allineate alle indicazioni PM.  
+- Architettura modulare e stratificata descritta in modo chiaro, con separazione di responsabilità e possibilità di estensione futura.  
+- Task tecnici granulari e ordinati coerenti con le attività di specifica e implementazione (modelli dati, autenticazione, API CRUD, gestione errori).  
+- Criteri di accettazione intermedi inseriti implicitamente nel dettaglio architetturale e nei moduli (es. gestione errori standardizzata, validazioni rigorose, sicurezza JWT).  
+- Rischi principali identificati, in linea con quelli indicati in PM, inclusi ambiguità requirement, dipendenze esterne, e rischi di sicurezza specifici.  
+- Documentazione inclusa con struttura file proposta e piano di implementazione dettagliato.  
+- Presenza di strategia di test completa comprendente unit test, integration test, sicurezza e casi limite, integrati nel ciclo di sviluppo con CI/CD.  
+- Definizione esplicita di ambiti out of scope e limitazioni corrispondenti, rispettando i vincoli PM.  
 
 ## Requisiti mancanti  
-- Mancano nel dettaglio criteri di accettazione formalizzati e specifici per ogni requisito funzionale, espressi in modo univoco e misurabile.  
-- Non sono definiti con chiarezza i flussi applicativi completi e dettaglio delle dipendenze tecnologiche tra moduli; ad esempio, la gestione dei permessi su risorse specifiche rimane generica.  
-- Gli endpoint API indicati sono generici (es. /resource/), senza specifica precisa del dominio o delle risorse concordate nei requisiti MVP, lasciando incertezza sui flussi reali.  
-- Non sono presenti riscontri espliciti sulle politiche implicite di sicurezza e compliance enterprise che il contesto richiede, ad esempio logging avanzato, audit trail o controlli approfonditi di sicurezza.  
-- Mancano dettagli operativi sul deployment effettivo in ambiente enterprise, come configurazione di alta disponibilità, backup o disaster recovery.  
+- Mancata esplicita definizione e formalizzazione dei criteri di accettazione per singolo requisito, come richiesto dalla specifica PM. La proposta dà informazioni tecniche ma non formalizza criteri di accettazione tracciabili e commentati in modo dedicato.  
+- Non sono evidenziate né riportate tutte le ambiguità eventualmente riscontrate nei requirement di partenza, requisito stringente PM.  
+- Mancata mappa di tracciamento formale tra requirement dichiarati e task tecnici o moduli proposti, con commenti specifici.  
+- Assenza di un piano esplicito di revisione con stakeholder, pur menzionato come necessario; mancano dettagli su metodologia, tempi e modalità.  
+- Non è presente una analisi dettagliata di gap o incompatibilità realmente verificati rispetto allo stack tecnologico, è solo assunta la compatibilità (il rischio è segnalato ma non analizzato).  
+- La proposta non dettaglia le dipendenze cross-team o di risorse terze come richiesto nel PM, né la gestione dei loro potenziali impatti sui rilasci.  
 
 ## Rischi e problemi  
-- Ambiguità non completamente risolte riguardo alle risorse gestite e requisiti funzionali specifici possono portare a sviluppi non allineati agli obiettivi di business.  
-- Dipendenza da dettagli di API esterne ancora da ricevere che potrebbero impattare sull’integrazione backend e richiedere riwork.  
-- Potenziale rischio di sottostimare vincoli di sicurezza o compliance non formalizzati ma critici in ambiente enterprise.  
-- Limitata esperienza del team segnalata nell’uso di FastAPI e JWT, che potrebbe aumentare i tempi di sviluppo o introdurre problemi di qualità.  
-- Documentazione disponibile sullo stack poco dettagliata, con possibile rallentamento nella mappatura funzionale completa.  
+- Rischio residuo di ambiguità o incompleta copertura requirement, non formalmente evidenziati o mitigati.  
+- Possibili gap di tracciabilità e monitoraggio dei requisiti rispetto alle attività di sviluppo, che possono causare disallineamento in fase di implementazione.  
+- Dipendenza fortemente basata sulla corretta configurazione e disponibilità di PostgreSQL, ma senza un piano di fallback o mitigazione dettagliata.  
+- Gestione JWT esplicitata, ma possibile rischio in aree quali revoca token e sicurezza avanzata rimane sotto-discussa.  
+- Mancanza di una chiara strategia per la gestione e tracciamento dei cambiamenti di requirement (change management mancato nel dettaglio).  
+- Dipendenza implicita da competenze elevate del team, senza piani di mitigazione in caso di skill gap che potrebbe influenzare tempi e qualità.  
+- Non è fornita una gestione esplicita dei potenziali ritardi da stakeholder e revisione, solo menzionati come rischio generico.  
 
 ## Test suggeriti  
-- Test unitari estesi per tutti i moduli di business logic, autenticazione e persistenza dati con copertura superiore a 80%, per garantire affidabilità.  
-- Test di integrazione con database PostgreSQL in ambiente containerizzato replicando scenari reali, verifica coerenza dati e performance base.  
-- Test di sicurezza specifici su autenticazione, autorizzazione JWT, gestione permessi e protezione endpoint critici.  
-- Test di resilienza e gestione errori, verificando la robustezza di error handler custom e logging.  
-- Test di carico e stress base per valutare la performance delle API in condizioni previste dal MVP, anche se non richiesto esplicitamente.  
+- Test di accettazione formali per ciascun requisito, basati sui criteri di accettazione da formalizzare e tracciare nelle specifiche.  
+- Test di interoperabilità ed integrazione tra i moduli e con lo stack tecnologico esistente, soprattutto test di caricamento e performance su PostgreSQL.  
+- Test di sicurezza approfonditi per token JWT, inclusa gestione di revoca, expiration, e tentativi di accesso non autorizzati.  
+- Test di validazione e gestione degli errori in tutti gli endpoint, con simulazione di casi limite e input malformati.  
+- Test di regressione automatizzati completi per tutte le API esposte, da integrare nella pipeline CI/CD come descritto.  
+- Verifica tramite test di carico e scalabilità per confermare conformità a requisiti enterprise di performance.  
+- Validazioni incrociate con checklist di requirement per garantire completa copertura e mappatura.  
 
 ## Azioni richieste  
-- Formalizzare e dettagliare i criteri di accettazione in modo univoco e misurabile per tutte le funzionalità descritte, prima dell’avvio dello sviluppo.  
-- Specificare con maggiore dettaglio le risorse backend gestite, i flussi applicativi completi e le dipendenze tecnologiche per ogni modulo.  
-- Ottenere e incorporare i dettagli tecnici delle API esterne di integrazione per minimizzare rischi di rilavorazione.  
-- Verificare con gli stakeholder le assunzioni sul contesto di sicurezza e compliance, formalizzando eventuali requisiti addizionali o vincoli impliciti.  
-- Pianificare un percorso formativo o di supporto tecnico per il team su FastAPI e JWT per mitigare rischio di ritardi.  
-- Integrare nel piano di implementazione attività previste per gestione configurazioni enterprise (es. backup, monitoring) anche se non strettamente richiesti ma utili in ambito enterprise.  
-- Consolidare la documentazione tecnica per migliorare la velocità e qualità della mappatura funzionale e facilitare la collaborazione tecnica futura.
+- Integrare formalmente criteri di accettazione per ogni requisito, con tracciabilità e commenti espliciti nella documentazione.  
+- Effettuare un’analisi dettagliata e documentata di eventuali ambiguità e gap nei requirement di partenza, con lista chiara e piani di mitigazione.  
+- Redigere e allegare una matrice di tracciamento che leghi requirement, task e moduli, con commenti di validazione.  
+- Elaborare un piano dettagliato per la revisione interna e con stakeholder, con tempi, modalità e checklist definitive.  
+- Approfondire e documentare la valutazione di compatibilità tecnologica e vincoli, segnalando eventuali criticità o necessità di mitigazione.  
+- Inserire un capitolo dedicato alla gestione delle dipendenze cross-team e dei rischi organizzativi correlati.  
+- Definire e formalizzare la gestione del change management durante l’analisi e post-consegna.  
+- Verificare e documentare strategie di mitigazione per possibili skill gap delle risorse tecniche.  
+- Integrare nella documentazione un piano di fallback o mitigazione per rischi legati alla configurazione DB e alla sicurezza JWT.
