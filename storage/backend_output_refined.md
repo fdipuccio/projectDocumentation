@@ -2,161 +2,120 @@ MODULE: BACKEND
 VERSION: 1
 
 ## 1. Obiettivo backend
-Progettare e implementare un backend API RESTful, utilizzando Python e FastAPI, che risponda ai requisiti funzionali e non funzionali definiti nella specifica PM per il rilascio MVP. La soluzione deve garantire sicurezza, performance ed integrabilità con sistemi esterni, offrendo un flusso utente base funzionante e una struttura scalabile e manutenibile nel contesto enterprise esistente. Particolare attenzione è posta alla definizione di metriche di performance e sicurezza, al setup degli ambienti di test e staging, e alla preparazione di una documentazione tecnica esaustiva per il team di sviluppo e QA.
+Realizzare un modulo backend RESTful API, conforme ai requisiti core del progetto PM MVP, che garantisca la fruizione corretta e sicura delle funzionalità richieste. Il backend deve essere integrato con sistemi legacy tramite API standard, conforme alle policy di sicurezza aziendali (inclusa gestione JWT per autenticazione/autorizzazione), e utilizzare PostgreSQL per la persistenza dati con un’architettura modulare e manutenibile, predisposta per future estensioni.
 
 ## 2. Assunzioni tecniche
-- Lo stack tecnologico utilizzato sarà Python 3.x con FastAPI per l’API layer e PostgreSQL come database relazionale.
-- L’autenticazione e autorizzazione saranno gestite utilizzando JWT, con chiavi segrete protette e meccanismi di rotazione sicura.
-- Le integrazioni esterne sono stabili e già disponibili, con un livello di complessità basso.
-- Il team di sviluppo possiede competenze consolidate nel tecn stack indicato.
-- Il progetto seguirà gli standard enterprise di sicurezza, performance e compliance obbligatori.
-- L’ambiente di test e staging sarà configurato in linea con i processi di provisioning esistenti e con un’attenzione particolare all’affidabilità e riproducibilità degli ambienti.
-- I requisiti, comunque suscettibili di ambiguità residue, saranno approfonditi nella fase iniziale di analisi e smarcati preventivamente.
-- Backup e recovery applicativo saranno integrati con meccanismi specifici per minimizzare la perdita di dati in caso di criticità.
+- Lo stack tecnologico è Python con FastAPI come framework backend, PostgreSQL per DB relazionale, e JWT per gestione sicurezza.
+- Infrastruttura runtime, CI/CD e ambiente di test già predisposti.
+- Sistemi legacy esposti tramite API REST standard utilizzate per integrazione.
+- Requisiti MVP già definiti, non sono previste funzionalità avanzate o ottimizzazioni di performance nella prima release.
+- Disponibilità di competenze interne per collaborazione su sicurezza, infrastruttura e test.
+- Gestione sicura delle chiavi JWT e segreti sarà formalizzata e integrata con la configurazione di ambiente.
+- Requisiti di performance e security test saranno definiti e formalizzati in collaborazione con team dedicati.
 
 ## 3. Architettura backend
-L’architettura si basa su un modello multi-layer:
-- **API Layer:** FastAPI gestisce le richieste HTTP REST, validazioni di input/output e orchestrazione delle chiamate verso il service layer.
-- **Service Layer:** Contiene la business logic, trasformazioni dati, gestione delle regole di sicurezza e coordinamento delle operazioni verso il data access layer.
-- **Data Access Layer (DAL):** Astratte le operazioni sul database PostgreSQL, garantendo separazione e indipendenza dalla persistenza specifica.
-- **Security Layer:** Gestisce autenticazione JWT, autorizzazioni, gestione sicura delle chiavi e rotazioni, nonché logging e auditing sicurezza.
-- **Monitoraggio & Metriche:** Middleware dedicato per raccolta di metriche di performance (es. latenza, throughput) e monitoraggio di eventi di sicurezza (tentativi falliti, sovraccarichi).
-- **Testing & CI/CD:** Integrazione di pipeline CI/CD con test unitari, di integrazione e test di sicurezza automatizzati.
-
-Questa architettura permette modularità, estendibilità, compliance con gli standard enterprise e una facile manutenzione.
+Architettura a 3 livelli:
+- **Presentation Layer**: API FastAPI esposte all’esterno, gestiscono richieste HTTP e orchestrano la business logic.
+- **Business Logic Layer**: servizi modulari e testabili che implementano le regole di business del modulo PM.
+- **Data Access Layer**: utilizzo di ORM (es. SQLAlchemy o equivalent ORM) per l’accesso sicuro e manutenibile a PostgreSQL.
+L’architettura prevede componenti per integrazione con sistemi esterni tramite client HTTP con gestione retry leggera e circuit breaker soft configurabili. La gestione degli errori e logging sono centralizzati. Autenticazione e autorizzazione con JWT sono integrate a livello API gateway o middleware FastAPI.
 
 ## 4. Moduli e responsabilità
-- **api:** Gestione degli endpoint HTTP, validazioni request/response.
-- **services:** Logica di business principale, orchestrazione funzionalità.
-- **repositories:** Accesso ai dati tramite ORM (es. SQLAlchemy), query e transazioni.
-- **security:** Implementazione JWT, gestione chiavi, autorizzazioni, gestione errori sicurezza.
-- **config:** Configurazioni centralizzate (database, JWT, environment variables).
-- **monitoring:** Middleware per monitoraggio metriche, logging e alert.
-- **tests:** Contiene test unitari, di integrazione, test di sicurezza e performance.
-- **docs:** Documentazione tecnica, casi d’uso, criteri di accettazione.
-- **setup:** Script e procedure per provisioning ambiente dev, test, staging.
-- **backup:** Procedure e script per backup e recovery a livello applicativo.
+- **API Module**: definizione degli endpoint REST, validazione input/output, gestione sicurezza JWT.
+- **Service Layer**: implementazione della logica applicativa core, orchestrazione chiamate a repository e servizi esterni.
+- **Repository Layer**: interfaccia di accesso a dati persistenti, con astrazione ORM su PostgreSQL.
+- **Integration Module**: client per comunicazione con sistemi legacy/API esterne, inclusa gestione retry e circuit breaker semplificati.
+- **Security Module**: utility per validazione token JWT, gestione permessi.
+- **Error Handling Module**: centralizzazione errori, mapping exception → response API standard.
+- **Logging Module**: gestione logging strutturato conforme a standard enterprise.
+- **Config Module**: gestione configurazioni ambiente incluse variabili di segretezza (JWT secret management).
 
 ## 5. API principali
-- **POST /auth/login:** Autenticazione utente, restituisce JWT access e refresh token.
-- **POST /auth/refresh-token:** Rinnovo del token di accesso tramite refresh token.
-- **GET /users/me:** Recupero dati profilo utente autenticato.
-- **GET /entities:** Lista risorse principali gestite dal backend (esempio base).
-- **POST /entities:** Creazione risorsa.
-- **GET /entities/{id}:** Dettagli risorsa specifica.
-- **PUT /entities/{id}:** Aggiornamento risorsa.
-- **DELETE /entities/{id}:** Cancellazione risorsa.
-
-Questi endpoint rappresentano il flusso utente core per l’MVP, rispettando le regole di sicurezza, validazione e gestione degli errori.
+- **POST /auth/login** — autenticazione utente, generazione token JWT.
+- **GET /resource/{id}** — recupero dati core del modulo PM (esempio generico).
+- **POST /resource** — creazione di una nuova risorsa gestita dal modulo.
+- **PUT /resource/{id}** — aggiornamento di risorsa.
+- **DELETE /resource/{id}** — rimozione di risorsa (se prevista dal requisito).
+- Endpoint supplementari per gestione configurazioni o monitoraggio modulo, se richiesti.
+Tutti gli endpoint sono protetti con JWT e prevedono controlli di autorizzazione di base.
 
 ## 6. Business logic
-La business logic gestisce:
-- Validazione approfondita dei dati in ingresso.
-- Regole di gestione sull’entità principale (CRUD).
-- Coordinamento tra più repository quando necessario.
-- Controlli di autorizzazione basati su ruoli e permessi contenuti nei token JWT.
-- Gestione della sicurezza e logging puntuale delle attività critiche.
-- Monitoraggio e limitazione del carico (rate limiting) per rispettare requisiti di performance.
-- Orchestrazione del rinnovo sicuro dei token JWT e gestione delle sessioni utente.
+- Validazione e trasformazione dati in ingresso e uscita API.
+- Coordinamento delle operazioni persistenti su PostgreSQL tramite repository.
+- Gestione regole di accesso e permessi utente integrate con JWT.
+- Coordinamento con sistemi legacy tramite modulo integrazione, includendo gestione retry normali su errori transitori.
+- Applicazione delle policy di sicurezza e governance interne.
+- Gestione coerenza dati minima a livello di transazioni DB.
+- Preparazione della risposta API comprensibile e conforme a standard REST.
 
 ## 7. Persistenza e integrazioni
-- Utilizzo di PostgreSQL come database relazionale, con schema normalizzato e indici adeguati.
-- ORM SQLAlchemy (o equivalente) per un accesso sicuro e testabile ai dati.
-- Transazioni gestite per garantire consistenza.
-- Integrazione low-level con sistemi esterni stabili, con mocking per i test di integrazione.
-- Backup applicativo automatizzato con script che eseguono dump incrementali e verifiche di integrità.
-- Strategie di recovery documentate per restore rapido e testato.
-- Setup ambienti staging identici al production per validazione flussi e integrazioni.
+- Persistenza dati tramite PostgreSQL, accesso mediato da ORM per astrarre query e garantire sicurezza.
+- Mappatura chiara tra modelli di dominio e tabelle DB per mantenibilità.
+- Integrazione con sistemi legacy via API HTTP REST, con client che implementano retry policy basilare e circuit breaker soft.
+- Gestione configurazioni dinamiche di endpoint legacy, timeout, e policy retry nella configurazione ambiente.
+- Log delle chiamate esterne ed esiti per audit e troubleshooting.
 
 ## 8. Autenticazione e autorizzazione
-- Autenticazione via JWT con algoritmi di firma sicuri (es. HS256 o RS256).
-- Gestione sicura delle chiavi private in vault o secrets manager.
-- Meccanismi di rotazione chiavi programmati e automatizzati.
-- Token refresh con validazione anche lato server per prevenire replay attack.
-- Autorizzazione basata su ruoli con controllo autorizzazioni dettagliato sulle risorse.
-- Gestione sicura degli errori di auth per non esporre informazioni sensibili.
-- Logging e monitoring di eventi di sicurezza e tentativi di accesso anomali.
+- Autenticazione basata su JWT: endpoint login genera token firmati.
+- Middleware FastAPI valida token JWT su ogni richiesta protetta.
+- Token contengono claims per definizione ruoli e permessi.
+- Gestione scadenza e rinnovo token conforme policy.
+- Segreti JWT (chiavi di firma/verifica) gestiti in modo sicuro attraverso variabili di ambiente o vault.
+- Logging e monitoraggio accessi e errori di autenticazione.
 
 ## 9. Gestione errori
-- Implementazione uniforme degli errori tramite eccezioni custom.
-- Risposte API standardizzate con codici HTTP appropriati (4xx per client, 5xx per server).
-- Logging strutturato degli errori critici con livelli di severità.
-- Messaggi di errore user-friendly ma non divulgativi di dettagli interni.
-- Retry logico limitato su errori temporanei (es. timeout db).
-- Gestione specifica degli errori di autenticazione, autorizzazione e validazione.
-- Meccanismi di fallback per casi di integrazioni esterne non disponibili.
+- Centralizzazione gestione eccezioni con middleware FastAPI custom.
+- Risposta API uniforme con codici HTTP chiari (4xx per errori client, 5xx per errori server).
+- Logging strutturato di errori con dettagli contestuali per debugging.
+- Gestione errori di integrazione legacy (timeout, errori HTTP) con log e propagazione controllata.
+- Eventuale fallback semplice o messaggi di errore user-friendly per chiamate API esterne non disponibili.
+- Monitoraggio errori per alerting (infrastruttura esterna non prevista dal scope).
 
 ## 10. Strategia di test backend
-- Test unitari su tutte le funzioni critiche e business logic.
-- Test di integrazione API-DB con database in-memory o container Docker PostgreSQL.
-- Mocking delle integrazioni esterne per test end-to-end affidabili.
-- Test di sicurezza su autenticazione JWT, gestione errori e validazione input.
-- Test di carico e performance per rispettare SLA e individuare colli di bottiglia.
-- Pipeline CI/CD che automatizza build, test e deployment.
-- Sessioni di walkthrough e validazione documentale con team QA.
-- Validazione degli ambienti test e staging come replica ambiente produzione.
+- Test unitari per tutti i moduli di business logic e repository con copertura >80%.
+- Test di integrazione per endpoint FastAPI e interfaccia con DB PostgreSQL.
+- Test di integrazione simulando chiamate a sistemi legacy con scenari di successo ed errore.
+- Test funzionali end-to-end in ambiente di test pre-rilascio.
+- Test di sicurezza base (JWT validation, access control) integrati nella pipeline CI/CD.
+- Definizione e pianificazione di test di penetrazione, stress test e audit di sicurezza in collaborazione con team infrastructure/security.
+- Review continua post rilasci MVP per estendere piano test.
 
 ## 11. Rischi tecnici
-- Ambiguità residue nei requisiti possono influire sulla delivery: occorre fase di analisi approfondita.
-- Complessità integrazioni esterne, benché low-level, possono introdurre latenza o instabilità.
-- Gestione JWT deve essere rigorosa per evitare vulnerabilità di sicurezza.
-- Risorse hardware e temporali limitate potrebbero impattare la fase di testing e tuning.
-- Mancanza di monitoraggio prestazionale potrebbe minare SLA e qualità percepita.
-- Backup e recovery devono essere accuratamente testati per evitare perdita dati.
-- Flessibilità limitata da stacking tecnologico legacy.
+- Requisiti parziali o ambigui che possono generare estensioni non previste, rallentando rilascio MVP.
+- Integrazione con sistemi legacy imprevedibili o non documentati che possono generare malfunzionamenti.
+- Mancanza di definizione chiara e formalizzazione test performance e sicurezza potrebbe compromettere qualità rilascio.
+- Possibili criticità nella gestione sicura dei segreti JWT in ambiente produzione se non coordinato con team infrastructure.
+- Dipendenze da altri team o fornitori esterni per API o infrastruttura senza accordi formali.
+- Limitata esperienza o tools per monitoraggio runtime e resilienza nel MVP, possibile impatto su stabilità.
 
 ## 12. Struttura file proposta
-```
-/backend_project
-|-- api/
-|   |-- __init__.py
-|   |-- endpoints/
-|       |-- auth.py
-|       |-- users.py
-|       |-- entities.py
-|-- services/
-|   |-- __init__.py
-|   |-- user_service.py
-|   |-- entity_service.py
-|-- repositories/
-|   |-- __init__.py
-|   |-- user_repository.py
-|   |-- entity_repository.py
-|-- security/
-|   |-- __init__.py
-|   |-- jwt_handler.py
-|   |-- key_management.py
-|-- config/
-|   |-- settings.py
-|-- monitoring/
-|   |-- __init__.py
-|   |-- metrics.py
-|   |-- logging.py
-|-- tests/
-|   |-- unit/
-|   |-- integration/
-|   |-- security/
-|-- docs/
-|   |-- architecture.md
-|   |-- acceptance_criteria.md
-|   |-- use_cases.md
-|-- setup/
-|   |-- provisioning_dev.sh
-|   |-- provisioning_test.sh
-|   |-- provisioning_staging.sh
-|-- backup/
-|   |-- backup.sh
-|   |-- restore.sh
-|-- main.py
-|-- requirements.txt
-|-- README.md
-```
+- `/app`
+  - `/api`
+    - `routes.py` — definizione endpoint FastAPI.
+    - `schemas.py` — serializzazione/validazione dati input/output con Pydantic.
+  - `/services`
+    - `core.py` — implementazione logica business principale.
+    - `integration.py` — client API verso sistemi legacy.
+    - `security.py` — gestione JWT, autenticazione e autorizzazione.
+  - `/repositories`
+    - `models.py` — modelli ORM per PostgreSQL.
+    - `db.py` — sessioni DB e operazioni CRUD.
+  - `/config`
+    - `settings.py` — configurazione ambiente e parametri runtime.
+  - `/exceptions`
+    - `handlers.py` — gestione e mapping errori API.
+  - `/logging`
+    - `logger.py` — setup logging strutturato.
+- `/tests`
+  - `/unit` — test unitari per moduli.
+  - `/integration` — test integrazione API e DB.
+  - `/e2e` — test end-to-end.
+- `main.py` — entrypoint FastAPI app.
 
 ## 13. Piano di implementazione
-1. **Analisi dettagliata e chiarimenti requisiti:** Incontri con PM e stakeholder per risolvere ambiguità, definire metriche di performance e sicurezza, specifiche casi d’uso e accettazione.
-2. **Design architetturale e setup ambienti:** Progettazione moduli e API, configurazione ambiente dev/test/staging con script di provisioning e setup database PostgreSQL.
-3. **Sviluppo funzionalità core:** Implementazione moduli API, business logic, repository, sicurezza JWT con gestione chiavi e rotazioni.
-4. **Testing e integrazione continua:** Sviluppo test unitari e integrazione, esecuzione test di sicurezza, performance e carico, configurazione pipeline CI/CD.
-5. **Documentazione tecnica e backup:** Redazione documentazione esaustiva (architettura, use cases, criteri accettazione), implementazione e test procedure backup/recovery applicativo.
-6. **Validazione QA e feedback:** Esecuzione walkthrough con team QA, correzione eventuali gap identificati, verifica ambienti staging.
-7. **Rilascio MVP:** Deployment graduale in produzione controllata, monitoraggio iniziale delle metriche di performance e sicurezza, supporto bug fixing critici post rilascio.
+1. **Analisi e definizione dettagliata stack e policy di sicurezza**: collaborare con team infrastruttura per formalizzare gestione segreti JWT, configurazioni sicure e criteri test specifici di sicurezza e performance.
+2. **Progettazione dettagliata architettura e definizione API**: stabilire tutti gli endpoint REST necessari per MVP, struttura moduli e pattern di integrazione con sistemi legacy.
+3. **Sviluppo moduli core e integrazioni**: implementare logica business, meccanismi di persistenza, middleware di autenticazione e client integrazione, supportando gestione errori centralizzata.
+4. **Test, validazione e documentazione tecnica**: scrittura test unitari e di integrazione, esecuzione test funzionali, redazione documentazione API e operativa, setup pipeline CI/CD.
+5. **Review con Product Owner e stakeholder**: verifica completezza funzionalità, compliance policy e readiness rilascio ambiente concordato senza regressioni.
+6. **Rilascio MVP e monitoraggio iniziale**: deploy ambiente di produzione con monitoraggio errori e log di sistema, pianificazione iterazioni successive per estensioni e ottimizzazioni.
