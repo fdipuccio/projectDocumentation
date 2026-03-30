@@ -1,0 +1,1 @@
+{'project_type': 'backend', 'needs_backend': True, 'needs_frontend': False, 'needs_database': True, 'backend_complexity': 'low', 'integration_level': 'low', 'backend_type': 'api'}
