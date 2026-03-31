@@ -1,69 +1,73 @@
 MODULE: PM VERSION: 1
 ## 1. Obiettivo
-Sviluppare un backend per un sistema di autenticazione utenti che consenta la registrazione, login tramite email e password, generazione e gestione di token JWT per sessioni protette e una funzionalità base di reset della password.
+Sviluppare un backend per un sistema di autenticazione utenti che consenta la registrazione, il login tramite email e password, la generazione e gestione di token JWT per l’accesso controllato a endpoint protetti, e una funzionalità base di reset della password.
 
 ## 2. Contesto e vincoli
-- Il backend deve essere implementato utilizzando il framework FastAPI.
-- Il database deve essere PostgreSQL per la gestione della persistenza dati.
-- Il sistema utilizzerà JWT (JSON Web Token) per la generazione e verifica dei token di autenticazione.
-- Il progetto si concentra esclusivamente sulle funzionalità di autenticazione/designed per essere integrato in sistemi più ampi.
-- Il reset password previsto è una funzionalità base: non è specificato se deve prevedere email di reset o altre modalità complesse.
+- Il progetto deve essere implementato utilizzando il framework FastAPI.
+- Il database di persistenza dovrà essere PostgreSQL.
+- Lo stack tecnico è Python con librerie per JWT.
+- I token JWT devono essere generati e validati seguendo standard sicuri.
+- Il sistema deve prevedere endpoint REST accessibili solo previa autenticazione tramite JWT.
+- La funzionalità di reset password deve essere di base (non dettagliata) e implementata solo lato backend.
+- Non sono menzionate specifiche di infrastruttura, sicurezza avanzata (es. MFA) o interfacce utente.
 
 ## 3. Assunzioni
-- Il sistema di autenticazione sarà usato in un contesto enterprise, quindi si assume un livello base di sicurezza adeguato al contesto (ad esempio hashing sicuro delle password).
-- Non ci sono requisiti sul sistema di gestione utenti (es. ruoli o permessi), quindi tali funzionalità non sono incluse.
-- Le email degli utenti sono univoche e vengono utilizzate come chiave per l’identificazione.
-- Non è esplicitamente richiesto il supporto per autenticazioni social o multifattore.
-- La gestione dei token JWT deve includere almeno creazione e verifica, ma non sono stati specificati dettagli sul tempo di scadenza o rotazione token.
+- L’email utente è unica e costituisce l’identificativo principale per login e registrazione.
+- La gestione delle email per reset password (es. invio email) non è parte del progetto o sarà gestita esternamente.
+- Il JWT conterrà almeno il minimo necessario per identificare l’utente e la scadenza del token.
+- Non sono richiesti livelli di sicurezza superiori (es. rate limiting, captcha).
+- Il backend esporrà API REST, con interfacce documentabili (es. OpenAPI).
+- La password sarà salvata in forma sicura (hashata) ma la specifica tecnica di hashing non è stata fornita.
+- La scalabilità e la gestione dell’infrastruttura non sono considerate MVP.
 
 ## 4. Scope MVP
-- Endpoint per la registrazione utente con email e password.
-- Endpoint login che accetta email e password, restituisce token JWT valido.
-- Implementazione della generazione di token JWT con configurazione minima (es. segreto e algoritmo).
-- Endpoint protetti che richiedono token JWT per l’accesso.
-- Funzionalità base di reset password: interface e meccanismo che consenta agli utenti di modificare la password (dettagli da definire, probabilmente tramite token o codice temporaneo).
-- Persistenza dati utenti su PostgreSQL con struttura adeguata a gestire email, password hashed e eventuali token di reset.
+- Endpoint per registrazione utente con validazione base dati e salvataggio su PostgreSQL.
+- Endpoint per login con verifica credenziali, generazione e restituzione token JWT.
+- Middleware o sistema di protezione endpoint che richieda token JWT valido.
+- Endpoint protetti accessibili solo tramite token JWT.
+- Endpoint per reset password con logica base (es. richiesta reset e aggiornamento password).
+- Persistenza dati utenti e token necessari su PostgreSQL.
 
 ## 5. Out of scope
-- Implementazione di sistemi di verifica email o email di conferma.
-- Supporto per autenticazione tramite OAuth o social login.
-- Gestione ruoli, permessi o livelli di accesso diversi tra utenti.
-- Funzionalità avanzate di reset password, come invio automatico di email con link/reset token.
-- Scalabilità orizzontale o deployment.
-- Monitoraggio, logging esteso o auditing delle autentificazioni.
-- UI o client frontend.
+- Interfaccia front-end o mobile.
+- Sistema di invio email o notifiche per reset password.
+- Autenticazione social o multi-factor.
+- Gestione dettagliata del ciclo di vita del token oltre la generazione e validazione di base.
+- Funzionalità avanzate di sicurezza (logging dettagliato degli accessi, monitoraggio intrusioni).
+- Documentazione esterna non tecnica o supporto post-release.
+- Scalabilità orizzontale, deployment, e configurazioni infrastrutturali.
 
 ## 6. Task tecnici ordinati
-1. Definizione schema database utenti in PostgreSQL (campi: id, email unico, password hashed, eventuali token/reset token).
-2. Implementazione modello dati e ORM (es. SQLAlchemy o equivalente).
-3. Setup dell’ambiente FastAPI con configurazione base.
-4. Implementazione endpoint di registrazione utente con validazioni base (es. email valida, password minima).
-5. Implementazione hashing sicuro delle password (es. bcrypt o argon2).
-6. Implementazione endpoint login che verifica credenziali e genera token JWT.
-7. Configurazione e generazione token JWT con algoritmo e chiave segreta.
-8. Creazione middleware/dependency per protezione endpoint con verifica JWT.
-9. Implementazione endpoint protetti di esempio per validazione accessi.
-10. Implementazione endpoint/reset password base (es. invio token/reset password).
-11. Gestione sicurezza per reset password (validità token, modifica password).
-12. Testing di integrazione per tutti gli endpoint.
-13. Documentazione API con OpenAPI/Swagger.
+1. Definizione schema database utenti e eventuali tabelle per gestione reset password.
+2. Implementazione modello dati in PostgreSQL.
+3. Setup progetto FastAPI con configurazione database.
+4. Sviluppo endpoint registrazione utente:
+   - Validazione dati input
+   - Hash password e salvataggio
+5. Sviluppo endpoint login:
+   - Verifica credenziali
+   - Generazione token JWT con payload minimo e scadenza
+6. Implementazione middleware o dipendenza FastAPI per protezione endpoint tramite verifica token JWT.
+7. Sviluppo endpoint protetti di prova (es. /protected) che richiedano JWT valido.
+8. Implementazione reset password base:
+   - Endpoint richiesta reset (es. generazione token reset o flag)
+   - Endpoint aggiornamento nuova password
+9. Testing unitario e integrazione per endpoint e logica token.
+10. Documentazione API (OpenAPI/Swagger automatica con FastAPI).
 
 ## 7. Acceptance criteria
-- Il backend permette la registrazione di un utente con email unica e password hashed.
-- L’endpoint login accetta email e password corretti e restituisce un token JWT valido.
-- I token JWT seguono lo standard e sono verificabili.
-- Gli endpoint protetti rifiutano richieste senza token o con token non valido.
-- L’utente può richiedere reset della password e modificarla utilizzando la procedura base prevista.
-- I dati utenti sono persistiti correttamente in PostgreSQL.
-- La documentazione API è disponibile e descrive tutti gli endpoint previsti.
-- Test automatici coprono i casi principali di registrazione, login, accesso protetto e reset password.
-- Tutte le password sono salvate in forma hashed in database (mai in chiaro).
+- Utente può registrarsi con email e password e i dati sono correttamente salvati e protetti nel DB.
+- Utente può autenticarsi con email e password e ricevere un token JWT valido.
+- Token JWT è verificato e utilizzato per l’accesso a endpoint protetti, mentre richieste senza token o con token scaduto/errato ricevono errore 401.
+- Endpoint reset password consente la richiesta e l’aggiornamento della password utente, con validazione base.
+- Il backend è sviluppato usando FastAPI e PostgreSQL come DB.
+- I test automatizzati coprono almeno i casi critici di registrazione, login, protezione endpoint e reset password.
+- La documentazione API è fruibile tramite OpenAPI/Swagger.
 
 ## 8. Rischi e punti aperti
-- Mancanza di dettagli sul flusso di reset password (es. invio email vs token temporaneo interno).
-- Non è definito il tempo di scadenza dei token JWT né le politiche di invalidazione.
-- Non sono specificati requisiti di sicurezza avanzata (rate limiting, captcha, MFA).
-- Possibili implicazioni di sicurezza dovute all’assenza di meccanismi di verifica email utente.
-- Ambiguità sulla granularità e complessità degli endpoint protetti richiesti (quanti e quali).
-- Scelta della libreria per hashing e gestione JWT non definita, importante valutarne la solidità.
-- Scalabilità e manutenzione futura del sistema non specificate, da pianificare in fase successiva.
+- Non è specificato il metodo di comunicazione o validazione per il reset password (es. email token), che potrebbe essere critico per sicurezza e usabilità.
+- Nessuna indicazione sulla politica di sicurezza password (lunghezza minima, complessità).
+- Gestione scadenza e revoca token JWT non dettagliata, possibile rischio sicurezza a lungo termine.
+- Non definito come gestire email duplicate o utenti già esistenti.
+- Non specificata la versione minima di FastAPI, PostgreSQL o librerie Python JWT.
+- Mancanza dell’indicazione su eventuali requisiti GDPR o compliance privacy nel trattamento dati utente.
