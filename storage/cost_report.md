@@ -1,7 +1,7 @@
 === TOKEN / COST SUMMARY ===
-  ba                   tokens=  1,900  (prompt=    591  completion=  1,309)  requests=1  cost=$0.0452
-  pm                   tokens=  3,321  (prompt=  1,728  completion=  1,593)  requests=1  cost=$0.0651
-  backend-simple       tokens=  4,529  (prompt=  2,124  completion=  2,405)  requests=1  cost=$0.0934
-  qa                   tokens=  5,798  (prompt=  4,318  completion=  1,480)  requests=1  cost=$0.0876
-  backend-simple       tokens=  6,313  (prompt=  3,599  completion=  2,714)  requests=1  cost=$0.1174
-  TOTAL                tokens= 21,861  (prompt= 12,360  completion=  9,501)  requests=5  cost=$0.4086
+  ba                   tokens=  2,540  (prompt=  1,681  completion=    859)  requests=1  cost=$0.0426
+  pm                   tokens=  3,600  (prompt=  2,367  completion=  1,233)  requests=1  cost=$0.0607
+  backend-simple       tokens=  5,843  (prompt=  3,134  completion=  2,709)  requests=1  cost=$0.1126
+  qa                   tokens=  6,422  (prompt=  5,362  completion=  1,060)  requests=1  cost=$0.0854
+  backend-simple       tokens=  7,638  (prompt=  4,188  completion=  3,450)  requests=1  cost=$0.1454
+  TOTAL                tokens= 26,043  (prompt= 16,732  completion=  9,311)  requests=5  cost=$0.4466

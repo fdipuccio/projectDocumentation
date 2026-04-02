@@ -1,68 +1,60 @@
-MODULE: QA  
-VERSION: 1  
-FINAL_STATUS: APPROVED_WITH_CHANGES  
+MODULE: QA
+VERSION: 1
+FINAL_STATUS: APPROVED_WITH_CHANGES
 
-## Requisiti coperti  
-- Conferma e utilizzo di FastAPI come framework backend, in linea con la specifica PM.  
-- Persistenza dati su database PostgreSQL con gestione tramite ORM e transazioni per garantire atomicità in operazioni critiche (registrazione, reset password).  
-- Endpoint per registrazione (POST /register) con validazione email/password e hashing sicuro (bcrypt/argon2).  
-- Endpoint login (POST /login) con verifica credenziali, generazione token JWT firmato (HS256) con user id e scadenza configurabile.  
-- Middleware FastAPI per protezione endpoint basata su validazione token JWT.  
-- Reset password con processo completo: richiesta token via email (temporaneo, JWT o UUID sicuro), validazione token e cambio password con hashing.  
-- Limitazione tentativi (rate limiting/block temporaneo account) per mitigazione brute force, configurabile.  
-- Validazione e sanitizzazione input tramite Pydantic, mitigazione CSRF e SQL Injection mediante query parametrizzate e design API stateless.  
-- Logging dedicato per eventi critici come login falliti, reset password richiesti, registrazioni.  
-- Gestione errori uniforme con risposte generiche e sanitizzazione output per evitare leak di informazioni sensibili.  
-- Comunicazione tramite HTTPS prevista a livello deployment.  
-- Architettura modulare con livelli chiari (API, business logic, DB, sicurezza, logging).  
-- Piano di test completo proposto, includendo test unitari, integrazione e casi edge riguardo sicurezza e concurrency.  
-- Documentazione e criteri di accettazione inclusi nel piano di rilascio MVP.  
+## Requisiti coperti
+- Backend REST API conforme allo stack tecnologico richiesto: Java, PostgreSQL, JWT, con pronta integrazione Bear.
+- Endpoint per registrazione, login, reset password via email implementati con specifiche richieste (validazione, controlli unicità, codici temporanei).
+- Uso di hashing sicuro password (bcrypt/Argon2) e firma robusta token JWT con secret key.
+- Middleware/filtro per validazione token JWT e protezione endpoint sensibili.
+- Mitigazione base attacchi brute force e implementazione basilare di rate limiting.
+- Logging anonimo e sicuro di eventi accesso, fallimenti login e reset password.
+- Monitoraggio minimo con metriche e alert su errori critici e anomalie sicurezza.
+- Architettura stateless e containerizzabile con supporto a scalabilità orizzontale.
+- Gestione errori standard con codici HTTP appropriati senza esposizione di dati sensibili.
+- Documentazione tecnica backend e API con esempi chiari.
+- Test unitari e di integrazione previsti e dettagliati sui moduli critici.
 
-## Requisiti mancanti  
-- Mancata definizione precisa in proposta DEV su formato esatto e schema token reset password (JWT vs UUID) e modalità di management (stateless vs salvataggio); rimane rischio di ambiguità.  
-- Politiche dettagliate (soglie, tempistiche) per blocco account e rate limiting non definite concretamente, solo criteri generali.  
-- Mancanza di target performance, SLA o indicatori di scalabilità quantificati non esplicitati, pur essendo richiesti come rischio da mitigare.  
-- Ambiguità persistente sul deployment HTTPS e gestione certificati, affidata al livello di deployment senza dettagli operativi.  
-- Nessuna menzione di test di carico o stress per validare performance e scalabilità.  
-- Mancanza esplicita di procedimento per gestione concurrency su operazioni simultanee (anche se si accenna a test e transazioni DB).  
-- Politiche di logging (formato, retention, privacy compliance) non definite.  
-- Nessuna indicazione su rotazione e gestione sicura delle chiavi segrete JWT e configurazioni sensibili.  
-- Mancanza di un piano più dettagliato per la gestione errori lato email esterno (ritardi, fallimenti invio token).  
 
-## Rischi e problemi  
-- Persistono rischi legati all’ambiguità tecnologica iniziale, ma la proposta ha formalizzato la scelta FastAPI; tuttavia, è necessario confermare formalmente prima di sviluppo.  
-- Gestione token reset password non definitiva può portare a problemi di sicurezza o di implementazione incoerente.  
-- Politiche di blocco e rate limiting poco definite rischiano di lasciare aperture per attacchi brute force o denial of service.  
-- Assenza di meccanismi di refresh e revoca token JWT limita flessibilità e sicurezza a lungo termine.  
-- Assenza di validazione obbligatoria dell’email post-registrazione potrebbe causare creazione di account con email false o inesistenti.  
-- Potenziali problemi di concorrenza durante reset password e registrazione simultanea, da validare con test specifici.  
-- Diffida dall’assenza di specifiche di performance e SLA che potrebbero impattare sulla pianificazione e scalabilità.  
-- Possibile dipendenza dal livello deployment per sicurezza HTTPS rappresenta un punto di debolezza senza dettagli operativi precisi.  
-- Mancanza di politiche e procedure per la sicurezza delle chiavi segrete JWT e gestione configurazioni sensibili.  
+## Requisiti mancanti
+- Chiarimento e definizione tecnica precisa sull’integrazione Bear rimangono un punto aperto senza dettaglio completo.
+- Parametri definitivi per rate limiting e blocco brute force non completamente specificati (es. soglie, durata blocco).
+- Nessuna esposizione dettagliata delle politiche di rotazione e gestione sicura delle secret key per JWT.
+- Nessuna menzione esplicita di protezioni backend contro CSRF/XSS, sebbene siano richieste in specifica; si fa riferimento solo a sanificazione input.
+- Mancata esplicitazione di test di performance e stress per valutare scalabilità orizzontale sotto carico reale.
+- Approfondimenti su failover e timeout per sistema email esterno non dettagliati, si presume implementazione esterna.
+- Mancanza di dettagli tecnici su approccio e tool di monitoraggio e alert (es. stack usato per metriche).
 
-## Test suggeriti  
-- Test unitari per tutta la logica di hashing, generazione e validazione token JWT e reset password.  
-- Test integrazione per tutti gli endpoint principali, inclusi casi di successo e di errore (registrazione con email duplicata, login con credenziali non valide, reset password con token scaduto).  
-- Test di sicurezza:  
-  - verifica mitigazione brute force e rate limiting su login e reset password;  
-  - tentativi multipli di reset password simultanei per identificare problemi di concorrenza;  
-  - tentativi di SQL injection e input malevoli per convalidare sanitizzazione dati;  
-  - test CSRF per garantire sicurezza su chiamate API.  
-- Test di rollback e consistenza DB durante errori nelle operazioni atomiche (registrazione e reset);  
-- Test accesso endpoint protetti con token validi, invalidi, assenti e scaduti (verifica risposta 401).  
-- Test di performance e stress per stimare comportamenti scalabilità e carico futuro (non previsto ma consigliato).  
-- Test di logging per assicurare corretta registrazione eventi critici senza leak di informazioni sensibili.  
-- Test end-to-end per flusso reset password inclusi invio email e conferma token.  
-- Validazione configurazioni di rate limiting e blocco account con soglie parametrizzabili.  
 
-## Azioni richieste  
-- Formalizzare ufficialmente la scelta FastAPI vs Java come stack definitivo prima di avviare lo sviluppo.  
-- Definire in modo preciso e univoco la gestione e formato del token di reset password (JWT o UUID) e le relative procedure di validazione e storage.  
-- Stabilire politiche dettagliate configurabili per blocco account, soglie e durate di rate limiting per mitigazione brute force.  
-- Integrare nel piano di test anche test di carico, stress e validazione concorrenza specifica su operazioni multiple simultanee.  
-- Definire piano di gestione chiavi JWT segrete, rotazioni e sicurezza configurazioni sensibili.  
-- Dettagliare le modalità operative di deployment HTTPS e gestione certificati SSL, per assicurare compliance e sicurezza delle comunicazioni.  
-- Considerare mitigazioni su assenza di validazione email post-registrazione, eventualmente definendo miglioramenti futuri.  
-- Preparare linee guida o pipeline di monitoraggio e retention per logging eventi critici in ottica compliance aziendale.  
-- Valutare introduzione futura di meccanismi di refresh o revoca token per aumentare sicurezza e flessibilità.  
-- Documentare chiaramente error handling lato integrazione email esterna per gestire eventuali problemi di consegna token reset.
+## Rischi e problemi
+- Ritardo o blocco sviluppo possibile se integrazione Bear non chiarita tempestivamente.
+- Implementazione rate limiting insufficiente o troppo restrittiva può influire negativamente su usabilità o sicurezza.
+- Affidabilità del reset password dipende da sistema email esterno non controllato direttamente; rischio di ritardo o perdita mail.
+- Problemi di concorrenza e locking su DB PostgreSQL in ambiente cluster da valutare in test di scalabilità.
+- Potenziale refactoring futuro necessario se richieste di ruoli/perms vengono aggiunte, impattando architettura attuale semplice.
+- Esposizione accidentale di dati sensibili da log o gestione chiavi segrete JWT potrebbe compromettere sicurezza.
+- Manca definizione chiara della strategia di rotazione delle secret key JWT, critica per sicurezza a lungo termine.
+
+
+## Test suggeriti
+- Test di validazione input estesi per email e password (es. formati email borderline, password borderline).
+- Test di stress sull’endpoint login e reset password per valutare efficacia rate limiting e controllo brute force.
+- Test di rollback e concorrenza su DB PostgreSQL durante registrazione, login e reset password con carichi simultanei.
+- Test end-to-end sull’integrazione con sistema email esterno per reset password (incluso handling timeout/errore).
+- Test di sicurezza mirati a vulnerabilità CSRF, XSS, injection e test di penetrazione API.
+- Test di rotazione secret key JWT e gestione sessioni (validità token dopo rotazione).
+- Test di performance e scalabilità con ambiente container cluster per validare orizzontal scaling.
+- Test sulla completezza e accuratezza dei log e corretto funzionamento degli alert di monitoraggio.
+- Test di usabilità e gestione errori con risposte coerenti e non ambigue.
+
+
+## Azioni richieste
+- Definire con urgenza l’integrazione Bear per evitare ritardi nello sviluppo e chiarire impatti architetturali.
+- Formalizzare parametri di rate limiting e brute force (soglie, tempi blocco, tracking).
+- Dettagliare la strategia di sicurezza per secret key JWT, includendo rotazione e gestione sicura.
+- Specificare e implementare protezioni server-side contro CSRF/XSS e sanificazione input approfondita.
+- Pianificare e realizzare test di performance e carico per validare scalabilità orizzontale.
+- Documentare e testare procedure di failover e timeout per sistema email esterno.
+- Migliorare documentazione tecnica includendo dettagli sulle tecnologie e strumenti per monitoraggio e alert.
+- Prevedere piani di estensione futura per ruoli e permessi, garantendo architettura modulare e preparata.
+- Implementare un framework di test completo che includa test di sicurezza approfonditi e test di end-to-end realisticamente simulati.
