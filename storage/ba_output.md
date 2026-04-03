@@ -1,45 +1,42 @@
 MODULE: BA VERSION: 1
 ## 1. Requisiti funzionali
-- Registrazione utente: Il sistema deve permettere la registrazione di un nuovo utente con i dati necessari (es. email, password). È implicito che la password debba essere validata e memorizzata in modo sicuro (hashing). Non è specificata la necessità di conferma email o altri dati aggiuntivi.
-- Login con email e password: Il sistema deve consentire agli utenti di autenticarsi usando email e password. Deve essere prevista la validazione delle credenziali e la gestione degli errori in caso di login fallito.
-- Generazione token JWT: Al login avvenuto con successo, il sistema deve generare un token JWT per l’utente, utilizzabile per autenticare le richieste successive.
-- Endpoint protetti: Alcuni endpoint delle API devono essere protetti e accessibili solo a utenti autenticati tramite token JWT valido.
-- Reset password (base): Deve essere previsto un endpoint per il reset password, considerato "base", quindi presumibilmente semplice (es. invio link o codice di reset via email). Non sono specificati flussi avanzati come domande di sicurezza o autenticazione a due fattori.
+- Registrazione utente: Gli utenti devono poter registrarsi fornendo email e password. È richiesta la validazione del formato email, verifica unicità email nel sistema, e il rispetto di requisiti minimi di complessità della password (minimo 8 caratteri con combinazione di lettere e numeri). Non è prevista una conferma via email per l'attivazione dell'account.
+- Login con email e password: Gli utenti devono poter effettuare login con email e password registrate, con gestione degli errori di credenziali e con limitazione dei tentativi errati per prevenire attacchi brute force.
+- Generazione token JWT: Dopo login, deve essere generato un token JWT firmato con chiavi sicure, dotato di payload contenente almeno l'identificativo utente e con durata configurabile tra 15 e 60 minuti. Non è previsto un meccanismo di refresh token.
+- Endpoint protetti: Tutti gli endpoint, ad eccezione di quelli di registrazione e login, devono essere protetti richiedendo la validazione del token JWT nel header Authorization. Accessi con token mancante, scaduto o invalido devono essere gestiti con risposta di errore.
+- Reset password (base): Deve essere previsto un flusso base di reset password che prevede l'invio di un token temporaneo, univoco e a scadenza (15-60 minuti) via email, che consenta la modifica della password. Gestione degli scenari con token scaduto o utilizzato.
 
 ## 2. Requisiti non funzionali
-- Sicurezza: Le password devono essere memorizzate in forma hashed e salted. I token JWT devono essere firmati con chiave sicura. Ogni input deve essere validato per prevenire injection o attacchi correlati. Le comunicazioni devono essere protette (HTTPS).
-- Performance: Le operazioni di autenticazione devono essere efficienti per non introdurre latenza significativa. Il database deve essere indicizzato per ricerche veloci su email utente.
-- Scalabilità: Il backend deve poter scalare orizzontalmente senza compromettere la validità dei token JWT (stateless).
-- Logging e monitoraggio: Deve essere previsto logging centralizzato degli eventi di autenticazione (login, reset password, errori), mantenendo la privacy degli utenti. Monitoraggio delle performance e sicurezza delle API.
-- Compatibilità con stack: Deve usare Java per il backend, REST API come protocollo di comunicazione, Bear framework per lo sviluppo, PostgreSQL come database e JWT come metodo di autenticazione.
+- Sicurezza: Password memorizzate con hashing e salting usando bcrypt. Tutte le comunicazioni API devono avvenire su HTTPS. Validazione e sanitizzazione degli input per prevenire attacchi di injection. Limitazione dei tentativi per login e reset password per evitare brute force. Il sistema deve essere conforme GDPR nella gestione dati utente.
+- Performance: Tempo di risposta per login e registrazione inferiore a 500 ms.
+- Scalabilità: Gestione efficiente del database PostgreSQL per supportare unicità email e operazioni di autenticazione. Sistema resiliente alla perdita temporanea del DB.
+- Logging e monitoraggio: Logging strutturato di eventi di autenticazione, accessi, errori e operazioni critiche. Monitoraggio di tentativi sospetti di login e altri eventi di sicurezza.
 
 ## 3. Ambiguità e domande aperte
-- Quali dati sono obbligatori per la registrazione utente oltre a email e password? Assunzione: solo email e password.
-- È richiesta la verifica della validità dell’email via conferma? Non specificato, assumiamo che non sia richiesta in questa versione.
-- Il reset password "base" prevede l’invio via email di un link o codice di reset? Assumiamo il metodo via email con link temporaneo.
-- La durata di validità del token JWT e la gestione della revoca token non sono specificate. Assumiamo un token con scadenza predefinita (es. 1 ora) e nessuna revoca attiva.
-- Sono previsti livelli di accesso o ruoli utenti? Non menzionato, quindi il sistema sarà a singolo livello di utenza.
-- Quali sono gli endpoint da proteggere? Assumiamo che tutti gli endpoint tranne registrazione, login e reset password siano protetti.
+- Conferma email post-registrazione non esplicitamente richiesta: Assumiamo che non sia prevista attivazione account con conferma email.
+- Durata esatta token JWT: Propone configurazione da 15 a 60 minuti, si consiglia definire un valore di default (es. 30 minuti).
+- Dettagli payload JWT e claims: Assumiamo payload minimo con userId, eventuali estensioni da definire successivamente.
+- Limite tentativi login e reset password: Numero esatto di tentativi e durata del blocco non specificati, si propone di definire una soglia ragionevole (es. 5 tentativi con blocco temporaneo di 15 minuti).
+- Logging: Dettaglio degli eventi loggati e formato non specificati, si assume logging di eventi login, errori, reset password e accessi protetti.
 
 ## 4. Edge case e scenari limite
-- Tentativi multipli di login falliti: gestione di blocco temporaneo o meccanismo anti-brute force non specificato.
-- Reset password richiesto da un'email non registrata: come trattare questa situazione? Assunzione: rispondere con messaggio generico per sicurezza.
-- Token JWT scaduto o manomesso: come gestire la risposta e la richiesta di nuovo login.
-- Cosa succede se un utente prova a registrarsi con email già esistente? Gestione errore duplicati.
-- Password troppo debole o non conforme a criteri di sicurezza.
-- Problemi di sincronizzazione del tempo per expiry token JWT in scenari di sistemi distribuiti.
+- Tentativi di registrazione con email già presente: il sistema deve gestire con errore specifico.
+- Login con credenziali errate multiple volte: blocco o delay progressivo per mitigare brute force.
+- Accesso a endpoint protetti con token scaduto o invalido.
+- Token reset password scaduto o già usato.
+- Possibile perdita temporanea del database o problemi di accesso.
+- Validazione input non conforme (email errata, password troppo debole).
 
 ## 5. Dipendenze e vincoli
-- La generazione del token JWT dipende dal login con successo tramite email e password.
-- L’accesso agli endpoint protetti dipende dalla validità del token JWT.
-- Il reset password dipende dalla possibilità di identificare un utente tramite email e inviare comunicazioni esterne (email).
-- Stack tecnologico vincola l’implementazione a Java con REST API, uso del framework Bear, il database PostgreSQL e utilizzo di token JWT per gestione sessione.
-- La sicurezza dipende dalla corretta configurazione del sistema di hashing password, firma JWT e uso di HTTPS.
+- Dipendenza critica tra registrazione e unicità email nel DB PostgreSQL.
+- I token JWT sono fondamentali per l'accesso a endpoint protetti.
+- Reset password presuppone l'invio email funzionante e gestione sicura dei token temporanei.
+- Sicurezza complessiva dipende da corretta gestione di password, token e comunicazioni HTTPS.
+- Limitazione tentativi login e reset necessita sincronizzazione con logging per monitoraggio.
 
 ## 6. Requisiti esclusi esplicitamente
-- Non è richiesto il supporto a autenticazione tramite social login o OAuth.
-- Non è richiesta la gestione di ruoli o permessi differenziati per utenti.
-- Non è prevista la conferma via email per la registrazione.
-- Non sono previsti meccanismi avanzati di reset password oltre a una funzionalità base (es. nessuna autenticazione a due fattori).
-- Non è indicata la necessità di interfacce di amministrazione o gestione utenti.
-- Non è menzionata la localizzazione o supporto multilingua.
+- Non è richiesta conferma email post-registrazione (attivazione account).
+- Non è previsto meccanismo di refresh token JWT.
+- Non sono richiesti ruoli utente o livelli di autorizzazione complessi.
+- Non è prevista integrazione con provider esterni di autenticazione (OAuth, SSO).
+- Non è previsto frontend o interfacce utente, solo backend REST API.
