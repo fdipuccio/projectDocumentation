@@ -1,42 +1,61 @@
 MODULE: BA VERSION: 1
 ## 1. Requisiti funzionali
-- Registrazione utente: Gli utenti devono poter registrarsi fornendo email e password. È richiesta la validazione del formato email, verifica unicità email nel sistema, e il rispetto di requisiti minimi di complessità della password (minimo 8 caratteri con combinazione di lettere e numeri). Non è prevista una conferma via email per l'attivazione dell'account.
-- Login con email e password: Gli utenti devono poter effettuare login con email e password registrate, con gestione degli errori di credenziali e con limitazione dei tentativi errati per prevenire attacchi brute force.
-- Generazione token JWT: Dopo login, deve essere generato un token JWT firmato con chiavi sicure, dotato di payload contenente almeno l'identificativo utente e con durata configurabile tra 15 e 60 minuti. Non è previsto un meccanismo di refresh token.
-- Endpoint protetti: Tutti gli endpoint, ad eccezione di quelli di registrazione e login, devono essere protetti richiedendo la validazione del token JWT nel header Authorization. Accessi con token mancante, scaduto o invalido devono essere gestiti con risposta di errore.
-- Reset password (base): Deve essere previsto un flusso base di reset password che prevede l'invio di un token temporaneo, univoco e a scadenza (15-60 minuti) via email, che consenta la modifica della password. Gestione degli scenari con token scaduto o utilizzato.
+- Ricezione ordini tramite API REST da frontend e canali esterni, con validazione degli input lato server.
+- Integrazione con gateway di pagamento Stripe per processi di authorization e capture del pagamento.
+- Workflow ordine completo: validazione dati ordine → pagamento → conferma ordine → gestione spedizione.
+- Gestione asincrona degli eventi di aggiornamento stato ordine tramite consumer su RabbitMQ.
+- Integrazione con servizio esterno di logistica per creazione spedizioni e tracciamento (tracking).
+- Invio notifiche email e push al cliente ad ogni cambio di stato ordine, tramite integrazione con SendGrid.
+- API di backoffice per operatori: visualizzazione lista ordini, dettaglio ordine, gestione rimborso manuale.
+- Gestione magazzino integrata: decremento stock su conferma pagamento, ripristino stock in caso di cancellazione.
+- Audit log di tutte le transizioni di stato ordine per tracciabilità e compliance.
+- Funzionalità di retry automatico in caso di errori temporanei nei servizi payment e logistica.
+- Idempotenza garantita per tutte le operazioni critiche per evitare duplicazioni e incongruenze.
 
 ## 2. Requisiti non funzionali
-- Sicurezza: Password memorizzate con hashing e salting usando bcrypt. Tutte le comunicazioni API devono avvenire su HTTPS. Validazione e sanitizzazione degli input per prevenire attacchi di injection. Limitazione dei tentativi per login e reset password per evitare brute force. Il sistema deve essere conforme GDPR nella gestione dati utente.
-- Performance: Tempo di risposta per login e registrazione inferiore a 500 ms.
-- Scalabilità: Gestione efficiente del database PostgreSQL per supportare unicità email e operazioni di autenticazione. Sistema resiliente alla perdita temporanea del DB.
-- Logging e monitoraggio: Logging strutturato di eventi di autenticazione, accessi, errori e operazioni critiche. Monitoraggio di tentativi sospetti di login e altri eventi di sicurezza.
+- Latenza delle API inferiore a 200 ms al 95° percentile per garantire buona esperienza utente.
+- Supporto a picchi di carico fino a 500 ordini al minuto, con adeguata scalabilità orizzontale.
+- Persistenza dati con PostgreSQL usando transazioni ACID per garantire coerenza e integrità dati.
+- Comunicazioni sicure via HTTPS; utilizzo di JWT per autenticazione e autorizzazione degli endpoint.
+- Logging strutturato e tracciabilità end-to-end completa per ogni ordine.
+- Resilienza ai guasti con meccanismi di retry e idempotenza.
+- Backup e protezione dei dati in ottica GDPR e sicurezza.
+- Monitoraggio performance e alerting per anomalie operative.
 
 ## 3. Ambiguità e domande aperte
-- Conferma email post-registrazione non esplicitamente richiesta: Assumiamo che non sia prevista attivazione account con conferma email.
-- Durata esatta token JWT: Propone configurazione da 15 a 60 minuti, si consiglia definire un valore di default (es. 30 minuti).
-- Dettagli payload JWT e claims: Assumiamo payload minimo con userId, eventuali estensioni da definire successivamente.
-- Limite tentativi login e reset password: Numero esatto di tentativi e durata del blocco non specificati, si propone di definire una soglia ragionevole (es. 5 tentativi con blocco temporaneo di 15 minuti).
-- Logging: Dettaglio degli eventi loggati e formato non specificati, si assume logging di eventi login, errori, reset password e accessi protetti.
+- Dettaglio sulla gestione esatta delle notifiche push (tecnologia, canali supportati, frequenza, opt-out) non specificato. Assunzione: supporto minimo a notifiche push via servizi esterni standard.
+- Comportamento esatto in caso di pagamento fallito o annullato non dettagliato (ordine mantiene stato o rollback completo?). Assunzione: rollback automatico delle risorse se pagamento non confermato.
+- Dettagli sul processo di rimborso manuale (range autorizzato, integrazione con payment gateway) non esplicitati. Assunzione: rimborso gestito solo tramite backoffice con conferma manuale e integrazione tramite Stripe API.
+- Non definito il livello di storicizzazione e retention degli audit log. Assunzione: conservazione audit log minimo 1 anno.
+- Sicurezza e accessi alle API di backoffice non dettagliati, presumibile uso JWT con ruoli.
+- Non specificate le modalità di sincronizzazione o aggiornamento del magazzino da altri sistemi esterni.
 
 ## 4. Edge case e scenari limite
-- Tentativi di registrazione con email già presente: il sistema deve gestire con errore specifico.
-- Login con credenziali errate multiple volte: blocco o delay progressivo per mitigare brute force.
-- Accesso a endpoint protetti con token scaduto o invalido.
-- Token reset password scaduto o già usato.
-- Possibile perdita temporanea del database o problemi di accesso.
-- Validazione input non conforme (email errata, password troppo debole).
+- Gestione di ordini duplicati inviati ripetutamente tramite retry API: confermata idempotenza come mitigazione.
+- Eventuali timeout o indisponibilità prolungata di Stripe o servizio logistica: presenza di meccanismi retry ma da dettagliare per casi di failure persistente.
+- Cancellazione ordini in stato intermedio (pagamento in corso o spedizione in corso): scenario da definire per coerenza stock e flusso.
+- Gap temporanei o perdita messaggi nella queue RabbitMQ e loro effetti sullo stato ordine.
+- Gestione ordini di grande volume in parallelo che impattano sul magazzino (concorrenza e lock risorse).
+- Eventuali problemi di scalabilità in caso di superamento picco ordini 500 ordini/minuto.
 
 ## 5. Dipendenze e vincoli
-- Dipendenza critica tra registrazione e unicità email nel DB PostgreSQL.
-- I token JWT sono fondamentali per l'accesso a endpoint protetti.
-- Reset password presuppone l'invio email funzionante e gestione sicura dei token temporanei.
-- Sicurezza complessiva dipende da corretta gestione di password, token e comunicazioni HTTPS.
-- Limitazione tentativi login e reset necessita sincronizzazione con logging per monitoraggio.
+- Dipendenza dal gateway Stripe per processo pagamento e rimborso.
+- Dipendenza dal servizio logistica esterno per spedizione e tracking.
+- Dipendenza da RabbitMQ per gestione asincrona eventi di aggiornamento stato.
+- Vincolo di utilizzo PostgreSQL con transazioni ACID per garantire coerenza.
+- Vincolo architetturale microservizio autonomo e deployabile indipendentemente.
+- Obbligo di idempotenza su operazioni critiche strettamente collegata a retry e resilienza.
+- Vincolo stack tecnologico: Java, Bear, REST API, PostgreSQL, JWT, SendGrid.
+- Sicurezza garantita tramite HTTPS e autenticazione JWT, necessario adeguato controllo accessi.
 
 ## 6. Requisiti esclusi esplicitamente
-- Non è richiesta conferma email post-registrazione (attivazione account).
-- Non è previsto meccanismo di refresh token JWT.
-- Non sono richiesti ruoli utente o livelli di autorizzazione complessi.
-- Non è prevista integrazione con provider esterni di autenticazione (OAuth, SSO).
-- Non è previsto frontend o interfacce utente, solo backend REST API.
+- Non è richiesto sviluppo di frontend o interfacce utente, solo backend REST API.
+- Non è richiesta gestione utenti o autenticazione client oltre al backoffice.
+- Non è richiesto supporto a metodi di pagamento diversi da Stripe.
+- Non è richiesta gestione di campagne marketing o promozioni.
+- Non è richiesta automazione spedizioni oltre alla creazione e tracking tramite servizio esterno.
+- Non è richiesto supporto a più magazzini o scenari multi-warehouse.
+- Non è prevista gestione avanzata di stock non legata a ordini (es. inventario manuale).
+- Non sono previsti canali di vendita offline o integrazione POS.
+
+Il documento chiarisce e struttura in modo completo i requisiti, includendo impliciti importanti come sicurezza, validazione, idempotenza e resilienza.

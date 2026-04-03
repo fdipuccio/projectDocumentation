@@ -1,138 +1,278 @@
 MODULE: BACKEND VERSION: 1
-## 1. Obiettivo backend
-Sviluppare un backend Java basato su Bear framework per fornire un sistema sicuro e modulare di autenticazione utenti con funzionalità di registrazione, login tramite email e password, gestione token JWT per accesso protetto e flusso di reset password via email.
 
-## 2. Assunzioni tecniche
-- Validazione email formattata correttamente e password con forza minima in fase di registrazione e login.
-- Password salvate in forma hashed con bcrypt o equivalente.
-- JWT firmati con chiave sicura e validità configurabile tra 15-60 minuti.
-- Tutti gli endpoint eccetto /register e /login sono protetti da verifica token JWT.
-- Logging strutturato per monitoraggio accessi, errori e operazioni critiche.
-- Gestione errori centralizzata con risposte standard e latenza accettabile.
-- Limitazione tentativi login per mitigare brute force.
-- Dipendenza da infrastruttura di invio email per reset password con necessità di fallback/ retry.
+## 1. Obiettivo backend 
+Sviluppare un microservizio backend worker per la gestione ordini e-commerce che garantisca un flusso end-to-end di creazione, gestione, pagamento, spedizione, rimborso e cancellazione ordini in modo scalabile, sicuro, resiliente e con completa tracciabilità. Il backend deve assicurare transazioni ACID, integrazione affidabile con servizi esterni (Stripe, logistica, notifiche), gestione asincrona tramite RabbitMQ e audit logging per compliance GDPR.
 
-## 3. Architettura backend
-Modulare in livelli:
-- Controller: gestisce richieste HTTP e risposte.
-- Service: logica di business, validazione, gestione token, hashing password.
-- Repository: accesso e manipolazione dati su PostgreSQL.
-- Security: gestione JWT, middleware/interceptor Bear per protezione endpoint.
-- Integration: invio email reset password con gestione fallback e retry.
-- Logging: registrazione eventi sicurezza e sistema.
+## 2. Assunzioni tecniche 
+- Tecnologia Java con framework Bear e JPA/Hibernate.
+- PostgreSQL come database relazionale con schema normalizzato e transazioni a isolamento serializzabile o Repeatable Read.
+- Comunicazioni API REST sicure via HTTPS con autenticazione/autorizzazione JWT.
+- Messaging asincrono basato su RabbitMQ con meccanismi di idempotenza e dead letter.
+- Integrazioni esterne via HTTPS con autenticazioni dedicate (Stripe, logistica, SendGrid).
+- Idempotenza garantita tramite token univoci per operazioni critiche.
+- Logging strutturato JSON e audit logging immutabile per monitoraggio e diagnosi.
+- Adozione di retry con backoff esponenziale e circuit breaker per errori temporanei.
+- Gestione opt-out per notifiche push/email.
 
-## 4. Moduli e responsabilità
-- UserRepository: operazioni CRUD su utenti, controllo unicità email.
-- AuthController: endpoint /register, /login, /reset-password/request, /reset-password/confirm.
-- AuthService: logica registrazione, login, gestione token, limitazione tentativi.
-- JwtProvider: generazione e validazione JWT.
-- PasswordHasher: hashing e verifica password.
-- EmailService: invio email con token reset e gestione retry/fallback.
-- LoggingService: log strutturato degli eventi.
-- JwtAuthMiddleware: interceptor per protezione API protette.
+## 3. Architettura backend 
+Architettura a microservizi con pattern event-driven:
+- API Gateway che gestisce autenticazione JWT e autorizzazioni ruoli.
+- Order Management Service come core service REST per ordini, pagamenti, eventi.
+- Backoffice API per gestione ordini e rimborsi da operatori autenticati.
+- Messaging RabbitMQ per eventi asincroni e aggiornamento stato ordine.
+- Module per integrazione Stripe, Logistics, Notification.
+- Persistence layer con repository pattern e transazioni coordinate.
+- Meccanismi di cache per dati statici e ottimizzazioni performance.
 
-## 5. API principali
-- POST /register
-  Request: {email: string, password: string} (email formato valido, password min 8 char)
-  Response: 201 {message: "User registered"}, 400 validazione, 409 email esistente
-  Esempio: {"email":"user@example.com", "password":"StrongPass123"}
+## 4. Moduli e responsabilità 
+- **API Gateway:** espone REST API, valida JWT, gestisce ruoli.
+- **Order Management Service:** logica business ordini, pagamenti, stock, spedizioni, notifiche.
+- **Backoffice API:** gestione ordini da operatori, richieste rimborso.
+- **Stripe Integration Module:** comunicazione con API Stripe per payment lifecycle.
+- **Logistics Integration Module:** creazione spedizioni e tracking.
+- **Notification Module:** invio email/push, gestione opt-out.
+- **Persistence Layer:** repository per ordini, pagamenti, stock, audit log.
+- **Messaging Layer:** publisher/consumer RabbitMQ con idempotenza e retry.
+- **Audit Logging:** registrazioni immutabili e conservazione per compliance.
 
-- POST /login
-  Request: {email: string, password: string}
-  Response: 200 {token: string JWT}, 400 errori validazione, 401 credenziali errate, 429 troppi tentativi
-  Esempio: {"email":"user@example.com", "password":"StrongPass123"}
+## 5. API principali 
 
-- POST /reset-password/request
-  Request: {email: string}
-  Response: 200 {message: "Reset token sent if email exists"}, 400 validazione
-  Esempio: {"email":"user@example.com"}
+### Creazione Ordine
+- Metodo: POST
+- Path: /api/orders
+- Request JSON schema:
+```json
+{
+  "client_token": "string",
+  "customer": {
+    "name": "string",
+    "email": "string",
+    "phone": "string"
+  },
+  "items": [{"product_id": "string", "quantity": integer}],
+  "shipping_address": {
+    "street": "string",
+    "city": "string",
+    "postal_code": "string",
+    "country": "string"
+  },
+  "payment_method": "stripe",
+  "metadata": {"key": "value"}
+}
+```
+- Response 201 Created:
+```json
+{
+  "order_id": "uuid",
+  "status": "CREATED",
+  "created_at": "iso8601-timestamp"
+}
+```
+- Esempio: Cliente crea ordine con token idempotenza, elenco prodotti e indirizzo.
 
-- POST /reset-password/confirm
-  Request: {token: string, newPassword: string}
-  Response: 200 {message: "Password updated"}, 400 validazione, 401 token invalido/scaduto
-  Esempio: {"token":"reset-token-uuid", "newPassword":"NewStrongPass123"}
+---
 
-## 6. Business logic
-- Registrazione con controllo email unica, validazione input, hashing password.
-- Login con controllo credenziali, gestione blocco tentativi falliti.
-- Generazione token JWT con payload utente e durata configurabile.
-- Middleware che valida JWT su API protette, blocca richieste non autorizzate.
-- Reset password con generazione token univoco, invio email e validazione token in conferma.
-- Logging di tutti i passaggi critici: accessi, errori, modifiche password.
-- Gestione errori e fallimenti DB con risposte standard, retry e fallback per email.
+### Recupero Dettaglio Ordine 
+- Metodo: GET
+- Path: /api/orders/{orderId}
+- Response 200 OK con dettagli ordine, stato, pagamenti, spedizioni.
 
-## 7. Persistenza e integrazioni
-- PostgreSQL, tabella utenti con colonne: id (PK), email (unique), password_hash, reset_token, timestamp vari.
-- Indice unique sulla email.
-- Gestione transazioni per evitare race condition su reset token.
-- Integrazione con servizio email esterno, con retry e fallback configurabili.
+---
 
-## 8. Autenticazione e autorizzazione
-- JWT firmati con chiave segreta, durata configurabile.
-- Middleware Bear per validazione token JWT su endpoint protetti.
-- Nessun ruolo utente multiplo o permessi avanzati (out of scope).
-- Limitazione tentativi login per prevenire attacchi brute force.
+### Cancellazione Ordine 
+- Metodo: POST
+- Path: /api/orders/{orderId}/cancel
+- Request:
+```json
+{
+  "cancel_token": "string"
+}
+```
+- Response 200 OK conferma cancellazione o errore stato non cancellabile.
 
-## 9. Gestione errori
-- Risposte uniformi in JSON con codici HTTP standard: 2xx, 4xx, 5xx.
-- Messaggi di errore generici per sicurezza (es: in login non rivelare se email o password errate).
-- Gestione errori DB con risposte 500 e log dettagliati.
-- Timeout e fallback su email service.
+---
 
-## 10. Strategia di test backend
-- test_register_user_success (unit/integration): verifica registrazione valida con nuova email.
-- test_register_duplicate_email (unit/integration): verifica errore su email già registrata.
-- test_login_success (unit/integration): verifica login corretto e token JWT.
-- test_login_fail_block_after_n_attempts (integration): verifica blocco dopo tentativi errati.
-- test_reset_password_request_and_confirm (integration/e2e): verifica flusso completo reset password.
-- test_jwt_validation_middleware (unit): verifica blocco accesso senza/ con token invalidi.
-- test_db_failure_handling (integration): verifica comportamento sistema a failure database.
-- test_email_service_retry_fallback (integration): verifica retry e fallback su servizio email.
+### Autorizzazione Pagamento 
+- Metodo: POST
+- Path: /api/orders/{orderId}/payment/authorize
+- Request:
+```json
+{
+  "payment_token": "string",
+  "amount": integer,
+  "currency": "string",
+  "payment_method_id": "string"
+}
+```
+- Response 200 OK con stato autorizzazione e id pagamento.
 
-## 11. Rischi tecnici
-- Dipendenza da servizio email esterno, necessaria strategia retry/fallback.
-- Possibili race condition su richieste reset password, gestite da transazioni e locking DB.
-- Limitata gestione revoca token JWT, solo scadenza temporale.
-- Mancanza verifica email esplicita può favorire account fraudolenti.
-- Necessità affinare strategie anti brute force oltre blocco base.
-- Ambiguità ruoli e protezione endpoint da chiarire per future estensioni.
+---
 
-## 12. Struttura file proposta
-``` 
-project_name/
-  Main.java               # Entry point applicazione — public class Main { public static void main(String[] args); }
-  Config.java             # Configurazione app — public class Config { public String jwtSecret; public int jwtExpiration; etc. }
-  models/
-    User.java             # Modello User — class User { Long id; String email; String passwordHash; String resetToken; Timestamp fields; }
-  repositories/
-    UserRepository.java   # Accesso dati — interface UserRepository { Optional<User> findByEmail(String); void save(User); }
-  services/
-    AuthService.java      # Logica autenticazione — register(), login(), resetPasswordRequest(), resetPasswordConfirm(), limitLoginAttempts()
-    JwtProvider.java      # Generazione e validazione JWT — generateToken(User), validateToken(String)
-    PasswordHasher.java   # Password hashing — hashPassword(String), verifyPassword(String, String)
-    EmailService.java     # Invio email con retry/fallback — sendResetTokenEmail(String, String)
-    LoggingService.java   # Logging strutturato — logAccess(), logError(), logSecurityEvent()
-  controllers/
-    AuthController.java   # Endpoint REST API — register(), login(), resetPasswordRequest(), resetPasswordConfirm()
-  security/
-    JwtAuthMiddleware.java # Middleware Bear per verifica token — handle(Request)
-  tests/
-    AuthServiceTest.java  # Test unit/integration — testRegisterUserSuccess(), testLoginFailBlockAfterAttempts(), testResetPasswordFlow()
-    JwtProviderTest.java  # Test unit — testGenerateAndValidateToken()
-    EmailServiceTest.java # Test integration — testEmailSendRetryFallback()
+### Cattura Pagamento 
+- Metodo: POST
+- Path: /api/orders/{orderId}/payment/capture
+- Request con capture_token, autorizzazione id.
+
+---
+
+### Rimborso Manuale 
+- Metodo: POST
+- Path: /api/orders/{orderId}/payment/refund
+- Richiesta idempotente con refund_token.
+
+---
+
+### Backoffice - Elenco ordini 
+- Metodo: GET
+- Path: /api/backoffice/orders
+- Filtri e paginazione, accesso limitato a operatori.
+
+---
+
+### Backoffice - Dettaglio Ordine 
+- Metodo: GET
+- Path: /api/backoffice/orders/{orderId}
+
+---
+
+### Backoffice - Esecuzione Rimborso 
+- Metodo: POST
+- Path: /api/backoffice/orders/{orderId}/refund
+- Richiesta idempotente per rimborso.
+
+---
+
+### Eventi asincroni via RabbitMQ 
+- Payload JSON con order_id, event_type, timestamp, payload dettaglio evento.
+
+## 6. Business logic 
+- Workflow ordini: creazione ordine -> pagamento autorizzato -> decremento stock -> spedizione -> notifiche -> transizioni stato.
+- Gestione rollback su pagamento fallito con ripristino stock.
+- Gestione cancellazione ordine solo in stati permessi con compensazioni.
+- Gestione rimborsi manuali via backoffice con integrazione Stripe e ripristino stock.
+- Eventi di stato e notifiche inviati in modo asincrono e idempotente.
+- Audit logging dettagliato per tutte le transizioni e operazioni critiche.
+- Ottimizzazioni e retry automatici per errori temporanei.
+
+## 7. Persistenza e integrazioni 
+- PostgreSQL con schema normalizzato (orders, order_items, payments, shipments, stock, audit_logs).
+- ORM JPA/Hibernate con repository pattern e gestione transazioni ACID.
+- Integrazione Stripe per autorizzazione, cattura, rimborso con idempotenza e retry.
+- Integrazione logistica esterna via REST e callback asincroni.
+- Messaging RabbitMQ per eventi stato ordine con dead-letter queue e retry.
+- Notifiche email tramite SendGrid e push notification esterne con opt-out.
+- Crittografia dati sensibili e backup regolari per compliance GDPR.
+
+## 8. Autenticazione e autorizzazione 
+- Tutte le API HTTPS.
+- Autenticazione JWT obbligatoria con token Bearer.
+- Ruoli definiti: Cliente, Backoffice-operator.
+- Validazione token e ruolo nell’API Gateway.
+- Limitazioni di accesso per endpoint a seconda ruolo.
+- Gestione sicurezza e validazione input/output per prevenzione injection.
+
+## 9. Gestione errori 
+- Validazione input con 400 Bad Request e messaggi chiari.
+- Idempotenza con 409 Conflict su duplicati.
+- Retry automatici con backoff esponenziale per errori temporanei.
+- Circuit breaker per protezione da errori esterni persistenti.
+- Logging strutturato e audit per errori permanenti e operazioni critiche.
+- Risposte API uniformi con payload standard error:
+```json
+{
+  "error_code": "string",
+  "message": "string",
+  "details": {}
+}
+```
+- Dead-letter queue per messaggi falliti con alerting.
+
+## 10. Strategia di test backend 
+
+| Nome test                           | Tipo         | Cosa verifica                                      | Input                        | Output atteso                        |
+|-----------------------------------|--------------|---------------------------------------------------|------------------------------|------------------------------------|
+| testCreateOrderSuccess             | Unit         | Creazione ordine con dati validi                   | JSON ordine valido            | Risposta 201 con order_id          |
+| testCreateOrderIdempotency         | Integration  | Idempotenza creazione ordine con stesso client_token | Doppia richiesta POST ordine  | 409 Conflict o stessa risposta    |
+| testPaymentAuthorizationSuccess   | Integration  | Autorizzazione pagamento valida con Stripe         | Dati pagamento validi         | 200 OK con stato AUTHORIZED        |
+| testPaymentAuthorizationFailure   | Integration  | Fallimento autorizzazione pagamento Stripe         | Dati errati o insufficiente fondi | 402 Payment Required             |
+| testStockDecrementConcurrentAccess | Integration  | Concorrenza decremento stock con ordini paralleli  | Ordini concorrenti            | Nessun deadlock, stock coerente    |
+| testRefundProcessBackoffice       | E2E          | Processo rimborso completo dall’API backoffice     | Richiesta rimborso corretta   | Stato ordine REFUNDED, stock ripristinato |
+| testCancelOrderValidState         | Unit         | Cancellazione ordine valido                          | Richiesta cancel ordine       | 200 OK, ordine annullato           |
+| testCancelOrderInvalidState       | Unit         | Tentativo cancellazione ordine non cancellabile    | Richiesta cancel in stato errato | Errore con messaggio appropriato |
+| testRabbitMQEventProcessing       | Integration  | Elaborazione eventi asincroni stato ordine          | Messaggio evento valido       | Aggiornamento stato corretto       |
+| testAuthJWTValidation             | Unit         | Validazione token JWT e controllo role              | Token validi e invalidi       | Accesso consentito o negato         |
+
+## 11. Rischi tecnici 
+- Gestione concorrenza nelle operazioni su stock con possibili race conditions.
+- Dipendenza da integrazioni esterne (Stripe, logistica) soggette a failure persistenti.
+- Complessità rollback e compensazioni incrociate pagamento-stock.
+- Implementazione corretta e completa di idempotenza tramite token univoci.
+- Gestione sicurezza accessi e compliance GDPR.
+- Complessità nella gestione notifiche push e opt-out.
+- Potenziali colli di bottiglia per performance non ottimizzate.
+- Necessità di monitoraggio, tuning e alerting costante per mantenere SLA.
+
+## 12. Struttura file proposta 
+
+```
+backend-order-management/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/orders/
+│   │   │   ├── api/
+│   │   │   │   ├── OrderController.java        # Espone endpoint REST ordini
+│   │   │   │   ├── PaymentController.java      # Gestione pagamenti e rimborso
+│   │   │   │   ├── BackofficeController.java   # Endpoint backoffice gestione ordini e rimborsi
+│   │   │   ├── service/
+│   │   │   │   ├── OrderService.java            # Business logic ordini
+│   │   │   │   ├── PaymentService.java          # Logica pagamenti Stripe
+│   │   │   │   ├── RefundService.java           # Gestione rimborsi
+│   │   │   │   ├── ShipmentService.java         # Integrazione logistica
+│   │   │   │   ├── NotificationService.java     # Invio notifiche email/push
+│   │   │   ├── repository/
+│   │   │   │   ├── OrderRepository.java         # CRUD ordini
+│   │   │   │   ├── PaymentRepository.java       # CRUD pagamenti
+│   │   │   │   ├── StockRepository.java         # Gestione stock
+│   │   │   │   ├── AuditLogRepository.java      # Persistenza audit logging
+│   │   │   ├── messaging/
+│   │   │   │   ├── EventPublisher.java          # Publisher eventi RabbitMQ
+│   │   │   │   ├── EventConsumer.java           # Consumer e processing eventi
+│   │   │   ├── config/
+│   │   │   │   ├── SecurityConfig.java          # Configurazione sicurezza JWT, ruoli, CORS
+│   │   │   │   ├── RabbitMQConfig.java          # Configurazione broker RabbitMQ
+│   │   │   │   ├── StripeConfig.java             # Configurazione client Stripe
+│   │   ├── resources/
+│   │   │   ├── application.properties           # Configurazioni generali
+│   │   │   ├── db/
+│   │   │   │   ├── schema.sql                    # Script schema DB con tabelle e indici
+│   │   │   ├── logback.xml                       # Configurazione logging strutturato
+├── tests/
+│   ├── unit/
+│   │   ├── OrderServiceTest.java
+│   │   ├── PaymentServiceTest.java
+│   ├── integration/
+│   │   ├── OrderCreationIntegrationTest.java
+│   │   ├── PaymentAuthorizationIntegrationTest.java
+│   ├── e2e/
+│   │   ├── RefundProcessE2ETest.java
 ```
 
-## 13. Piano di implementazione
-1. Definire schema DB e migrazioni con tabella utenti e vincoli.
-2. Implementare UserRepository con operazioni base e controllo unicità.
-3. Sviluppare PasswordHasher con bcrypt.
-4. Realizzare JwtProvider per generazione/validazione JWT.
-5. Costruire AuthService con logica registrazione, login, token, limitazione tentativi.
-6. Creare EmailService per invio email reset con retry e fallback.
-7. Implementare AuthController con tutti gli endpoint REST.
-8. Integrare JwtAuthMiddleware per protezione endpoint.
-9. Implementare LoggingService e inserire log dettagliati nei moduli.
-10. Scrivere e automatizzare test unitari, di integrazione e e2e per coprire happy path ed errori.
-11. Effettuare test di carico e performance.
-12. Documentare dettagli tecnici, incluse strategie di gestione concorrente reset password e fallback email.
-13. Rilascio MVP con monitoraggio e review post deploy.
+## 13. Piano di implementazione 
+1. Setup progetto Java, configurazioni base (Jar, build, repository).
+2. Definizione schema DB e script di creazione.
+3. Implementazione moduli persistence e repository.
+4. Sviluppo API REST con OrderController e PaymentController.
+5. Implementazione Business Logic per creazione ordine, pagamento e stato.
+6. Integrazione Stripe per autorizzazione, cattura, rimborso con gestione idempotenza.
+7. Sviluppo messaging RabbitMQ publisher/consumer per eventi stato.
+8. Implementazione Logging e Audit log.
+9. Integrazione moduli spedizione e notifiche asincrone.
+10. Creazione Backoffice API e gestione rimborsi.
+11. Stesura test unitari, integration e E2E.
+12. Setup CI/CD, monitoraggio, alerting.
+13. Test load e tuning prestazioni.
+14. Deployment e rilascio monitorato.
+
+---
+
+Proposta consolidata pronta per revisione QA e successiva implementazione.
