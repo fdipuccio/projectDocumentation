@@ -1,75 +1,76 @@
 MODULE: PM VERSION: 1
 ## 1. Obiettivo
-Realizzare un backend per la gestione dell’autenticazione utenti che consenta la registrazione, login tramite email e password, generazione e validazione di token JWT, protezione di endpoint REST API e gestione base del reset password, utilizzando lo stack tecnologico Java, REST API, Bear framework, PostgreSQL e JWT.
+Realizzare un backend di autenticazione utenti che permetta la registrazione, login tramite email e password, generazione e verifica di token JWT per l’accesso a endpoint protetti, e reset password base, sfruttando lo stack tecnologico Java, REST API, Bear framework, PostgreSQL e JWT. Il sistema deve essere sicuro, performante, scalabile e facile da monitorare.
 
 ## 2. Contesto e vincoli
-- Lo sviluppo deve avvenire in ambiente enterprise con particolare attenzione alla sicurezza, performance (<200ms per login/registrazione) e scalabilità orizzontale.
-- Persistenza dati utenti tramite PostgreSQL.
-- Architettura modulare backend integrata con Bear framework.
-- Utilizzo di JWT per autenticazione e autorizzazione alle API protette.
-- Gestione password con hashing e salting (es. bcrypt).
-- Dipendenza esterna per invio email nel processo di reset password.
-- Nessuna funzionalità di multi-fattore o ruoli avanzati è prevista.
-- Comunicazioni tra client e server su canali sicuri HTTPS.
+- Stack tecnico obbligatorio: Java, REST API, Bear framework, PostgreSQL come database, JWT per i token di autenticazione.
+- Backend only: non è prevista una UI o frontend.
+- L’architettura deve prevedere integrazione completa con il database PostgreSQL per persistenza dati utenti e gestione sessioni/token.
+- La sicurezza prevede archiviazione password hashed con salt, JWT firmati con scadenza temporale, e controlli rigorosi sugli input.
+- Le API devono rispondere con buona velocità per garantire esperienza utente soddisfacente.
+- Il sistema deve poter scalare orizzontalmente.
+- Logging sicuro e monitoraggio di eventi critici sono obbligatori.
+- Non sono previsti sistemi di autenticazione multifattoriale, social login o autorizzazioni granulari.
 
 ## 3. Assunzioni
-- Policy password: minima 8 caratteri con lettere e numeri (senza definizione esplicita nel requisito originale).
-- Validità token JWT impostata a 1 ora.
-- Token per reset password con validità di 15 minuti.
-- Invio email di reset password tramite sistema esterno integrato.
-- Conferma email per attivazione account è opzionale e da valutare.
-- Sistema iniziale senza gestione di ruoli/autorizzazioni multiple.
-- Protezione da attacchi comuni implementata a livello applicativo (es. blocco login dopo tentativi multipli falliti, mitigazione CSRF).
-- Logging e monitoraggio limitati agli eventi di autenticazione e reset password.
+- La validazione email in fase di registrazione includerà verifica dell’unicità ma non necessariamente conferma tramite link di attivazione.
+- Le password devono rispettare best practice standard: minimo 8 caratteri con lettere, numeri e simboli.
+- I token JWT avranno durata di circa un’ora con possibilità di introdurre in futuro meccanismi di refresh.
+- Il reset password base si realizzerà inviando un link o codice temporaneo via email.
+- Si introdurranno limiti di tentativi login/reset per mitigare attacchi brute force, pur non essendo esplicitamente richiesto.
+- Non si implementano sistemi avanzati di gestione password come scadenze obbligatorie o password temporanee.
+- La gestione di sessioni multiple per utente sarà supportata senza restrizioni specifiche.
 
 ## 4. Scope MVP
-- Endpoint per registrazione utente con validazione email e policy password.
-- Endpoint login con verifica credenziali e generazione token JWT.
-- Middleware o filtro per protezione endpoint tramite verifica token JWT.
-- Endpoint per richiesta reset password con generazione e invio token temporaneo.
-- Endpoint per cambio password utilizzando token di reset.
-- Persistenza dati utenti e token di reset in PostgreSQL.
-- Meccanismi base di sicurezza (hashing password, trasmissione HTTPS).
-- Logging eventi critici di autenticazione e reset.
+- Endpoint REST per registrazione utente con controllo unicità email e validazione password.
+- Endpoint login con verifica credenziali e generazione token JWT firmato e con scadenza.
+- Middleware o filtro per protezione endpoint accessibili solo con token JWT valido.
+- Endpoint per reset password base, con invio codice/link a email registrata.
+- Persistenza dati utenti e token/sessioni su PostgreSQL.
+- Logging sicuro e monitoraggio degli eventi critici (login, reset password, errori).
+- Gestione degli errori e risposte coerenti per casi di credenziali errate, token invalidi/scaduti.
+- Meccanismi base di sicurezza input validation per prevenire injection e vulnerabilità comuni.
+- Scalabilità a livello di backend e database.
 
 ## 5. Out of scope
-- Autenticazione multi-fattore (2FA).
-- Gestione di ruoli e permessi avanzati o livelli di autorizzazione differenti.
-- Integrazione con provider esterni per login social o SSO.
-- Funzionalità di logout esplicito e revoca token JWT.
-- Registrazione utente con dati oltre email e password.
-- Personalizzazioni avanzate del flusso di reset password (oltre il livello base).
-- Conferma obbligatoria con email prima dell’attivazione dell’account (proposta opzionale non implementata nel MVP).
+- Autenticazione multifattore (MFA).
+- Login tramite social network o sistemi terzi.
+- Gestione ruoli utente e autorizzazioni granulari.
+- UI o frontend.
+- Gestione avanzata di password (es. password temporanee, politiche di scadenza obbligatorie).
+- Sistemi complessi di verifica identità o blocco IP automatico oltre limiti di tentativi login/reset (non specificati esplicitamente).
 
 ## 6. Task tecnici ordinati
-1. Definizione schema dati utenti, token reset e log eventi in PostgreSQL.
-2. Implementazione endpoint REST per registrazione utente con validazioni (email, password).
-3. Implementazione endpoint login con verifica credenziali e creazione token JWT.
-4. Configurazione Bear framework per gestione token JWT e filtro autorizzazione su endpoint protetti.
-5. Implementazione endpoint reset password: richiesta token, invio email tramite sistema esterno.
-6. Implementazione endpoint di aggiornamento password con validazione token reset.
-7. Implementazione hashing e salting password con bcrypt o equivalente.
-8. Logging audit eventi login, reset e errori di autenticazione.
-9. Gestione errori e edge case (tentativi login falliti multipli, token scaduti o manomessi).
-10. Configurazione HTTPS e audit sicurezza delle comunicazioni.
-11. Testing funzionale e di sicurezza (include test performance).
+1. Progettazione schema database utenti e token in PostgreSQL.
+2. Implementazione endpoint registrazione con validazione input, controllo unicità email, hashing password con salt sicuro.
+3. Implementazione endpoint login con verifica credenziali e generazione token JWT firmato, impostazione scadenza token.
+4. Sviluppo middleware Bear per protezione endpoint mediante verifica token JWT valido.
+5. Implementazione endpoint reset password base con generazione codice/link temporaneo e invio email.
+6. Configurazione logging sicuro per eventi critici (login, reset, errori).
+7. Realizzazione controlli input rigorosi per tutte le API.
+8. Testing funzionale e di sicurezza su casi normali e limitrofi (tentativi errati, token scaduti).
+9. Setup monitoraggio e alert base per malfunzionamenti e tentativi di attacco.
+10. Documentazione tecnica API e configurazioni sicurezza.
 
 ## 7. Acceptance criteria
-- Successo della registrazione con utenti email univoci e password conformi policy.
-- Login restituisce token JWT valido con scadenza di 1 ora.
-- Endpoint protetti rifiutano richieste senza token valido.
-- Possibilità di richiesta reset password con generazione e invio token temporaneo valido 15 minuti.
-- Cambio password accettato solo con token reset valido.
-- Password memorizzate solo in forma hashed e salted.
-- Tempi di risposta login/registrazione inferiori a 200ms in condizioni di carico normale.
-- Logging di eventi critici presente e consultabile.
-- Gestione appropriata di errori e casi limite come token scaduto, login multipli falliti.
+- Utente può registrarsi con email unica e password conforme a policy.
+- Utente può effettuare login con email/password valide e ricevere token JWT con scadenza.
+- Endpoint protetti rispondono solo se token JWT è presente, valido e non scaduto; altrimenti ritornano errore 401.
+- Reset password consente di inviare codice/link via email e permette modifica password.
+- Password salvate nel database sono hashed con salt sicuro.
+- Tutte le API validano gli input e impediscono injection o dati non validi.
+- Log eventi critici sono correttamente registrati e consultabili in modo sicuro.
+- Il sistema risponde con performance accettabili (es. tempi di risposta inferiori a 1 secondo per endpoint critici).
+- Il sistema scala orizzontalmente senza perdita di funzionalità.
+- Test di sicurezza base superati (es. tentativi ripetuti login bloccati o limitati).
+- Documentazione tecnica completa e aggiornata.
 
 ## 8. Rischi e punti aperti
-- Mancata definizione definitiva della policy password e gestione conferma email possono impattare sicurezza.
-- Dipendenza da sistema esterno per l’invio email di reset password potrebbe introdurre vulnerabilità o ritardi.
-- Non gestita esplicitamente la revoca token JWT o logout esplicito (potenziale rischio di token compromessi).
-- Possibili problemi di sicurezza avanzata (es. attacchi replay token) da approfondire e mitigare.
-- Necessità di definire e implementare meccanismi di blocco/tolleranza per tentativi login falliti.
-- Ambiguità su gestione più complessa di ruoli o livelli autorizzativi in futuro.
-- Monitoraggio e alerting solo parzialmente definito, potrebbe essere necessario estenderlo per produzione.
+- Ambiguità sulla conferma dell’email in fase di registrazione, attualmente esclusa ma possibile rischio di account non validi.
+- Politiche di sicurezza password e limiti di tentativi non dettagliati: serve conferma o definizione più precisa.
+- Gestione token JWT: politiche di rinnovo/refresh non implementate nell’MVP possono limitare usabilità futura.
+- Vulnerabilità potenziali a DoS o attacchi brute force se limiti tentativi o monitoraggio non adeguati.
+- Gestione utenti senza accesso all’email per reset password non risolta.
+- Concorrenza in registrazione simultanea con stessa email deve essere gestita attentamente lato DB.
+- Necessità di chiarire dettagli di logging e monitoraggio per rispettare eventuali compliance di sicurezza.
+- Mancanza di ruoli o autorizzazioni granulari potrebbe limitare l’estensione futura del sistema.

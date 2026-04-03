@@ -2,7 +2,7 @@
 
 ## Workflow Status
 - Final status: APPROVED
-- Total attempts: 1
+- Total attempts: 4
 
 ## Requirement Analysis
 {'project_type': 'backend', 'needs_backend': True, 'needs_frontend': False, 'needs_database': True, 'backend_complexity': 'low', 'integration_level': 'low', 'backend_type': 'api'}
@@ -10,465 +10,490 @@
 ## PM Output
 MODULE: PM VERSION: 1
 ## 1. Obiettivo
-Realizzare un backend per la gestione dell’autenticazione utenti che consenta la registrazione, login tramite email e password, generazione e validazione di token JWT, protezione di endpoint REST API e gestione base del reset password, utilizzando lo stack tecnologico Java, REST API, Bear framework, PostgreSQL e JWT.
+Realizzare un backend di autenticazione utenti che permetta la registrazione, login tramite email e password, generazione e verifica di token JWT per l’accesso a endpoint protetti, e reset password base, sfruttando lo stack tecnologico Java, REST API, Bear framework, PostgreSQL e JWT. Il sistema deve essere sicuro, performante, scalabile e facile da monitorare.
 
 ## 2. Contesto e vincoli
-- Lo sviluppo deve avvenire in ambiente enterprise con particolare attenzione alla sicurezza, performance (<200ms per login/registrazione) e scalabilità orizzontale.
-- Persistenza dati utenti tramite PostgreSQL.
-- Architettura modulare backend integrata con Bear framework.
-- Utilizzo di JWT per autenticazione e autorizzazione alle API protette.
-- Gestione password con hashing e salting (es. bcrypt).
-- Dipendenza esterna per invio email nel processo di reset password.
-- Nessuna funzionalità di multi-fattore o ruoli avanzati è prevista.
-- Comunicazioni tra client e server su canali sicuri HTTPS.
+- Stack tecnico obbligatorio: Java, REST API, Bear framework, PostgreSQL come database, JWT per i token di autenticazione.
+- Backend only: non è prevista una UI o frontend.
+- L’architettura deve prevedere integrazione completa con il database PostgreSQL per persistenza dati utenti e gestione sessioni/token.
+- La sicurezza prevede archiviazione password hashed con salt, JWT firmati con scadenza temporale, e controlli rigorosi sugli input.
+- Le API devono rispondere con buona velocità per garantire esperienza utente soddisfacente.
+- Il sistema deve poter scalare orizzontalmente.
+- Logging sicuro e monitoraggio di eventi critici sono obbligatori.
+- Non sono previsti sistemi di autenticazione multifattoriale, social login o autorizzazioni granulari.
 
 ## 3. Assunzioni
-- Policy password: minima 8 caratteri con lettere e numeri (senza definizione esplicita nel requisito originale).
-- Validità token JWT impostata a 1 ora.
-- Token per reset password con validità di 15 minuti.
-- Invio email di reset password tramite sistema esterno integrato.
-- Conferma email per attivazione account è opzionale e da valutare.
-- Sistema iniziale senza gestione di ruoli/autorizzazioni multiple.
-- Protezione da attacchi comuni implementata a livello applicativo (es. blocco login dopo tentativi multipli falliti, mitigazione CSRF).
-- Logging e monitoraggio limitati agli eventi di autenticazione e reset password.
+- La validazione email in fase di registrazione includerà verifica dell’unicità ma non necessariamente conferma tramite link di attivazione.
+- Le password devono rispettare best practice standard: minimo 8 caratteri con lettere, numeri e simboli.
+- I token JWT avranno durata di circa un’ora con possibilità di introdurre in futuro meccanismi di refresh.
+- Il reset password base si realizzerà inviando un link o codice temporaneo via email.
+- Si introdurranno limiti di tentativi login/reset per mitigare attacchi brute force, pur non essendo esplicitamente richiesto.
+- Non si implementano sistemi avanzati di gestione password come scadenze obbligatorie o password temporanee.
+- La gestione di sessioni multiple per utente sarà supportata senza restrizioni specifiche.
 
 ## 4. Scope MVP
-- Endpoint per registrazione utente con validazione email e policy password.
-- Endpoint login con verifica credenziali e generazione token JWT.
-- Middleware o filtro per protezione endpoint tramite verifica token JWT.
-- Endpoint per richiesta reset password con generazione e invio token temporaneo.
-- Endpoint per cambio password utilizzando token di reset.
-- Persistenza dati utenti e token di reset in PostgreSQL.
-- Meccanismi base di sicurezza (hashing password, trasmissione HTTPS).
-- Logging eventi critici di autenticazione e reset.
+- Endpoint REST per registrazione utente con controllo unicità email e validazione password.
+- Endpoint login con verifica credenziali e generazione token JWT firmato e con scadenza.
+- Middleware o filtro per protezione endpoint accessibili solo con token JWT valido.
+- Endpoint per reset password base, con invio codice/link a email registrata.
+- Persistenza dati utenti e token/sessioni su PostgreSQL.
+- Logging sicuro e monitoraggio degli eventi critici (login, reset password, errori).
+- Gestione degli errori e risposte coerenti per casi di credenziali errate, token invalidi/scaduti.
+- Meccanismi base di sicurezza input validation per prevenire injection e vulnerabilità comuni.
+- Scalabilità a livello di backend e database.
 
 ## 5. Out of scope
-- Autenticazione multi-fattore (2FA).
-- Gestione di ruoli e permessi avanzati o livelli di autorizzazione differenti.
-- Integrazione con provider esterni per login social o SSO.
-- Funzionalità di logout esplicito e revoca token JWT.
-- Registrazione utente con dati oltre email e password.
-- Personalizzazioni avanzate del flusso di reset password (oltre il livello base).
-- Conferma obbligatoria con email prima dell’attivazione dell’account (proposta opzionale non implementata nel MVP).
+- Autenticazione multifattore (MFA).
+- Login tramite social network o sistemi terzi.
+- Gestione ruoli utente e autorizzazioni granulari.
+- UI o frontend.
+- Gestione avanzata di password (es. password temporanee, politiche di scadenza obbligatorie).
+- Sistemi complessi di verifica identità o blocco IP automatico oltre limiti di tentativi login/reset (non specificati esplicitamente).
 
 ## 6. Task tecnici ordinati
-1. Definizione schema dati utenti, token reset e log eventi in PostgreSQL.
-2. Implementazione endpoint REST per registrazione utente con validazioni (email, password).
-3. Implementazione endpoint login con verifica credenziali e creazione token JWT.
-4. Configurazione Bear framework per gestione token JWT e filtro autorizzazione su endpoint protetti.
-5. Implementazione endpoint reset password: richiesta token, invio email tramite sistema esterno.
-6. Implementazione endpoint di aggiornamento password con validazione token reset.
-7. Implementazione hashing e salting password con bcrypt o equivalente.
-8. Logging audit eventi login, reset e errori di autenticazione.
-9. Gestione errori e edge case (tentativi login falliti multipli, token scaduti o manomessi).
-10. Configurazione HTTPS e audit sicurezza delle comunicazioni.
-11. Testing funzionale e di sicurezza (include test performance).
+1. Progettazione schema database utenti e token in PostgreSQL.
+2. Implementazione endpoint registrazione con validazione input, controllo unicità email, hashing password con salt sicuro.
+3. Implementazione endpoint login con verifica credenziali e generazione token JWT firmato, impostazione scadenza token.
+4. Sviluppo middleware Bear per protezione endpoint mediante verifica token JWT valido.
+5. Implementazione endpoint reset password base con generazione codice/link temporaneo e invio email.
+6. Configurazione logging sicuro per eventi critici (login, reset, errori).
+7. Realizzazione controlli input rigorosi per tutte le API.
+8. Testing funzionale e di sicurezza su casi normali e limitrofi (tentativi errati, token scaduti).
+9. Setup monitoraggio e alert base per malfunzionamenti e tentativi di attacco.
+10. Documentazione tecnica API e configurazioni sicurezza.
 
 ## 7. Acceptance criteria
-- Successo della registrazione con utenti email univoci e password conformi policy.
-- Login restituisce token JWT valido con scadenza di 1 ora.
-- Endpoint protetti rifiutano richieste senza token valido.
-- Possibilità di richiesta reset password con generazione e invio token temporaneo valido 15 minuti.
-- Cambio password accettato solo con token reset valido.
-- Password memorizzate solo in forma hashed e salted.
-- Tempi di risposta login/registrazione inferiori a 200ms in condizioni di carico normale.
-- Logging di eventi critici presente e consultabile.
-- Gestione appropriata di errori e casi limite come token scaduto, login multipli falliti.
+- Utente può registrarsi con email unica e password conforme a policy.
+- Utente può effettuare login con email/password valide e ricevere token JWT con scadenza.
+- Endpoint protetti rispondono solo se token JWT è presente, valido e non scaduto; altrimenti ritornano errore 401.
+- Reset password consente di inviare codice/link via email e permette modifica password.
+- Password salvate nel database sono hashed con salt sicuro.
+- Tutte le API validano gli input e impediscono injection o dati non validi.
+- Log eventi critici sono correttamente registrati e consultabili in modo sicuro.
+- Il sistema risponde con performance accettabili (es. tempi di risposta inferiori a 1 secondo per endpoint critici).
+- Il sistema scala orizzontalmente senza perdita di funzionalità.
+- Test di sicurezza base superati (es. tentativi ripetuti login bloccati o limitati).
+- Documentazione tecnica completa e aggiornata.
 
 ## 8. Rischi e punti aperti
-- Mancata definizione definitiva della policy password e gestione conferma email possono impattare sicurezza.
-- Dipendenza da sistema esterno per l’invio email di reset password potrebbe introdurre vulnerabilità o ritardi.
-- Non gestita esplicitamente la revoca token JWT o logout esplicito (potenziale rischio di token compromessi).
-- Possibili problemi di sicurezza avanzata (es. attacchi replay token) da approfondire e mitigare.
-- Necessità di definire e implementare meccanismi di blocco/tolleranza per tentativi login falliti.
-- Ambiguità su gestione più complessa di ruoli o livelli autorizzativi in futuro.
-- Monitoraggio e alerting solo parzialmente definito, potrebbe essere necessario estenderlo per produzione.
+- Ambiguità sulla conferma dell’email in fase di registrazione, attualmente esclusa ma possibile rischio di account non validi.
+- Politiche di sicurezza password e limiti di tentativi non dettagliati: serve conferma o definizione più precisa.
+- Gestione token JWT: politiche di rinnovo/refresh non implementate nell’MVP possono limitare usabilità futura.
+- Vulnerabilità potenziali a DoS o attacchi brute force se limiti tentativi o monitoraggio non adeguati.
+- Gestione utenti senza accesso all’email per reset password non risolta.
+- Concorrenza in registrazione simultanea con stessa email deve essere gestita attentamente lato DB.
+- Necessità di chiarire dettagli di logging e monitoraggio per rispettare eventuali compliance di sicurezza.
+- Mancanza di ruoli o autorizzazioni granulari potrebbe limitare l’estensione futura del sistema.
 
 ## Backend Output
 MODULE: BACKEND VERSION: 1
-
 ## 1. Obiettivo backend
-Realizzare un backend modulare in Java utilizzando Bear framework che gestisca l’autenticazione utenti tramite REST API. Le funzionalità principali devono includere la registrazione utenti con validazione email unica e password conforme a policy, login con generazione di token JWT valido per 1 ora, protezione di endpoint tramite filtro JWT, gestione della richiesta e conferma reset password tramite token temporanei validi 15 minuti con invio email tramite sistema esterno, e logging di eventi critici. Il sistema deve garantire sicurezza elevata, performance entro 200ms per login e registrazione e scalabilità orizzontale.
+Realizzare un backend API REST per la gestione dell'autenticazione utenti che supporti registrazione, login, protezione di endpoint tramite token JWT e reset password di base. Il sistema deve garantire sicurezza, performance, scalabilità orizzontale e monitoraggio degli eventi critici, utilizzando Java, Bear framework, PostgreSQL e JWT. Le API saranno progettate per rispondere in meno di 1 secondo sugli endpoint critici e con gestione rigorosa degli input per prevenire vulnerabilità comuni.
 
 ## 2. Assunzioni tecniche
-- Policy password: minimo 8 caratteri, contenente lettere e numeri.
-- Token JWT con scadenza impostata a 1 ora.
-- Token reset password con validità 15 minuti.
-- Persistenza dati utenti, token reset e log eventi in PostgreSQL.
-- Password memorizzate con hashing e salting tramite bcrypt.
-- Comunicazioni via HTTPS.
-- Invio email tramite sistema esterno integrato, non gestito direttamente nel codice.
-- Gestione blocco tentativi login multipli falliti e mitigazioni CSRF implementate a livello applicativo.
-- Nessuna implementazione iniziale di multi-fattore, ruoli, logout esplicito o revoca token.
-- Logging limitato ad eventi critici di autenticazione e reset password.
+- Registro utenti con email unica, senza conferma tramite link di attivazione.
+- Password conforme a policy minima (≥ 8 caratteri: lettere, numeri, simboli).
+- Token JWT firmati con durata di circa 1 ora, senza meccanismo di refresh nell’MVP.
+- Reset password con invio di codice o link temporaneo via email.
+- Limiti base su tentativi di login e reset per mitigare brute force.
+- Persistenza dati utenti e token/sessioni su PostgreSQL.
+- Architettura stateless per scalabilità orizzontale.
+- Logging cifrato e monitoraggio per eventi critici.
+- Tutte le validazioni input, senza autorizzazioni granulari o MFA.
+- Deployment in ambiente che supporta Java e PostgreSQL.
 
 ## 3. Architettura backend
-Architettura modulare layerizzata:
-- Controller/Router layer: espone REST API per autenticazione.
-- Service layer: contiene logica di business per registrazione, login, reset password.
-- Persistence layer: accesso a PostgreSQL tramite DAO/repository.
-- Security layer: gestione hashing password, generazione e validazione JWT, filtro Bear per protezione endpoint.
-- Integration layer: chiamate verso sistema esterno per invio email reset password.
-Sistema stateless, progettato per scalabilità orizzontale e prestazioni <200ms su login/registrazione.
-Error handling centralizzato con codici HTTP appropriati.
-Logging eventi critici per audit e monitoraggio base.
+Architettura modulare a strati:
+- Controller REST per esposizione API.
+- Service layer per logica business (registrazione, login, reset password).
+- Repository layer per accesso dati PostgreSQL con mapping ORM.
+- Middleware Bear per validazione token JWT e protezione endpoint.
+- Modulo di logging sicuro con cifratura eventi critici.
+- Monitoraggio eventi e metriche (logging + alerting).
+- Pooling connessioni DB per performance.
+- Statelness del backend, nessuna dipendenza di stato tra richieste.
+- Sistema email esterno integrato con meccanismi retry base.
 
 ## 4. Moduli e responsabilità
-- UserModule: gestione dati utenti, validazioni registrazione e login.
-- AuthModule: gestione login, generazione e validazione token JWT.
-- ResetPasswordModule: generazione token reset, invio email, cambio password con token.
-- SecurityModule: hashing/salting password con bcrypt, filtro Bear per protezione endpoint JWT.
-- PersistenceModule: repository per utenti, token reset, log eventi.
-- EmailIntegrationModule: interfaccia per invio email via sistema esterno.
-- LoggingModule: logging audit eventi critici autenticazione e reset.
-- ErrorHandlingModule: gestione centralizzata errori e risposte API.
+- **UserController**: espone endpoint REST /register, /login, /reset-password/request, /reset-password/confirm.
+- **AuthService**: gestisce registrazione, autenticazione utente, generazione e validazione JWT, controllo limiti tentativi.
+- **ResetPasswordService**: genera codici reset, invia email, valida codice reset e aggiorna password.
+- **JwtAuthMiddleware**: intercetta chiamate protette e verifica validità token JWT.
+- **UserRepository**: CRUD utenti e gestione dati persistenti in PostgreSQL.
+- **ResetTokenRepository**: gestione codici reset password su DB.
+- **ValidationService**: validazione di email, password e input API.
+- **EventLogger**: logging cifrato eventi critici (login, reset, errori).
+- **EmailService**: interfaccia per invio email con retry e fallback base.
+- **MetricsMonitor**: raccolta metriche base e monitoraggio dei tentativi errati.
+- **ConfigModule**: gestione configurazione applicazione (DB, JWT, logging, email).
 
 ## 5. API principali
 
 ### POST /api/v1/auth/register
-- Request body:
+- Request body schema:
   ```json
   {
-    "email": "string (email valida, univoca)",
-    "password": "string (min 8 caratteri, lettere e numeri)"
+    "email": "string (valid email, unique, max 254)",
+    "password": "string (min 8 chars, include letters, numbers, symbols)"
   }
   ```
-- Response body:
+- Response body schema:
   - 201 Created
     ```json
-    {
-      "message": "Utente registrato con successo"
-    }
+    { "message": "User registered successfully" }
     ```
   - 400 Bad Request (validation error)
-  - 409 Conflict (email già registrata)
-- Esempio request:
-  ```json
+    ```json
+    { "error_code": "VALIDATION_FAILED", "message": "Detailed validation error" }
+    ```
+  - 409 Conflict (email already exists)
+    ```json
+    { "error_code": "EMAIL_CONFLICT", "message": "Email already registered" }
+    ```
+- Esempio:
+  Request:
+  ```
+  POST /api/v1/auth/register
   {
-    "email": "utente@example.com",
-    "password": "Pass1234"
+    "email": "user@example.com",
+    "password": "P@ssw0rd123!"
   }
   ```
-- Esempio response 201:
-  ```json
+  Response:
+  ```
+  201 Created
   {
-    "message": "Utente registrato con successo"
+    "message": "User registered successfully"
   }
   ```
 
 ### POST /api/v1/auth/login
-- Request body:
+- Request body schema:
   ```json
   {
-    "email": "string (email valida)",
+    "email": "string (valid email)",
     "password": "string"
   }
   ```
-- Response body:
+- Response body schema:
   - 200 OK
     ```json
     {
-      "token": "string (JWT, valido 1 ora)"
+      "token": "jwt-token-string",
+      "expires_in": 3600
     }
     ```
-  - 400 Bad Request (validation error)
-  - 401 Unauthorized (credenziali errate, blocco tentativi)
-- Esempio request:
-  ```json
+  - 400 Bad Request (validation failed)
+  - 401 Unauthorized (invalid credentials or user not found)
+  - 429 Too Many Requests (brute force limit reached)
+- Esempio:
+  Request:
+  ```
+  POST /api/v1/auth/login
   {
-    "email": "utente@example.com",
-    "password": "Pass1234"
+    "email": "user@example.com",
+    "password": "P@ssw0rd123!"
   }
   ```
-- Esempio response 200:
-  ```json
+  Response:
+  ```
+  200 OK
   {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_in": 3600
   }
   ```
 
 ### POST /api/v1/auth/reset-password/request
-- Request body:
+- Request body schema:
   ```json
-  {
-    "email": "string (email valida)"
-  }
+  { "email": "string (valid registered email)" }
   ```
-- Response body:
+- Response body schema:
   - 200 OK
     ```json
-    {
-      "message": "Email per reset password inviata se email registrata"
-    }
+    { "message": "Reset password link/code sent if email exists" }
     ```
-- Esempio request:
-  ```json
-  {
-    "email": "utente@example.com"
-  }
+- Esempio:
   ```
-- Esempio response:
-  ```json
-  {
-    "message": "Email per reset password inviata se email registrata"
-  }
+  POST /api/v1/auth/reset-password/request
+  { "email": "user@example.com" }
+  ```
+  Response:
+  ```
+  200 OK
+  { "message": "Reset password link/code sent if email exists" }
   ```
 
 ### POST /api/v1/auth/reset-password/confirm
-- Request body:
+- Request body schema:
   ```json
   {
-    "token": "string (token reset valido)",
-    "newPassword": "string (min 8 caratteri, lettere e numeri)"
+    "email": "string (valid email)",
+    "reset_code": "string (valid temporary code)",
+    "new_password": "string (conforming to policy)"
   }
   ```
-- Response body:
+- Response body schema:
   - 200 OK
     ```json
-    {
-      "message": "Password modificata con successo"
-    }
+    { "message": "Password reset successful" }
     ```
   - 400 Bad Request (validation error)
-  - 401 Unauthorized (token scaduto o non valido)
-- Esempio request:
-  ```json
+  - 401 Unauthorized (invalid or expired code)
+- Esempio:
+  ```
+  POST /api/v1/auth/reset-password/confirm
   {
-    "token": "reset-token-string",
-    "newPassword": "NewPass123"
+    "email": "user@example.com",
+    "reset_code": "ABC123",
+    "new_password": "N3wP@ssw0rd!"
   }
   ```
-- Esempio response 200:
-  ```json
-  {
-    "message": "Password modificata con successo"
-  }
+  Response:
+  ```
+  200 OK
+  { "message": "Password reset successful" }
   ```
 
-### Protezione endpoint API
-- Middleware/filtro Bear che valida JWT.
-- Endpoint protetti restituiscono 401 Unauthorized se token mancante o non valido.
+### Protezione endpoint
+- Middleware Bear **JwtAuthMiddleware**:
+  - Intercetta richieste su endpoint protetti.
+  - Verifica presenza e validità di token JWT nel header Authorization: Bearer token.
+  - Risponde 401 Unauthorized se token mancante, invalido o scaduto.
 
 ## 6. Business logic
-- Registrazione utente con controllo univocità email, validazione password e hashing bcrypt.
-- Login con verifica password hashed, limitazione tentativi falliti e generazione JWT.
-- Gestione token JWT con scadenza 1 ora per sessioni stateless.
-- Reset password: generazione token unico temporaneo 15 minuti, salvataggio nel DB, invio email tramite sistema esterno.
-- Conferma reset password con verifica token e aggiornamento password hashed.
-- Blocchi e mitigazioni per tentativi login falliti multiple per prevenire brute force.
-- Logging eventi critici quali registrazione, login, reset e errori rilevanti.
+- Registrazione: validazione email e password, controllo unicità email concorrente tramite locking e vincolo DB, hashing password con bcrypt + salt sicuro, persistenza user in DB.
+- Login: verifica email e password (bcrypt verify), limitazione tentativi errati (rate limiting in memoria o DB), generazione JWT firmato con scadenza 1 ora, logging evento.
+- Reset password:
+  - Request: verifica esistenza email, generazione codice temporaneo unico con scadenza, salvataggio DB, invio email con retry e fallback semplice.
+  - Confirm: validazione codice reset (unicità, scadenza), aggiornamento password hashed, invalidazione codice.
+- Middleware JWT: verifica integrità e scadenza token, estrazione userId da token, blocco accesso con 401.
+- Validazione in tutte le API input per prevenire injection e dati errati.
+- Logging cifrato per eventi critici e errori.
+- Monitoraggio base con metriche e alert su tentativi anomali.
 
 ## 7. Persistenza e integrazioni
-- PostgreSQL con tabelle:
-  - users: id, email (unique), password_hashed, created_at, updated_at.
-  - reset_tokens: id, user_id, token, expiration_timestamp.
-  - auth_logs: id, user_id, event_type (login, reset, error), timestamp, ip_address.
-- Integrazione email tramite modulo dedicato che espone interfaccia per invio email di reset.
-- Connessioni DB configurate con pool e ottimizzate per performance.
-- Bear framework integrato con DAO/repository per accesso DB.
+- Database PostgreSQL con tabelle:
+  - **users**: id (PK), email (unique), password_hash, created_at, updated_at.
+  - **reset_tokens**: id (PK), user_id (FK users.id), code (unique), expires_at, created_at, used (bool).
+- Indici su email in users e code in reset_tokens.
+- Transazioni DB per coerenza operazioni critiche (es. registrazione e reset).
+- Tool migrazione schema consigliato: Liquibase o Flyway.
+- Integrazione servizio email esterno con retry base e fallback.
+- Connection pooling per DB.
+- Monitoraggio stato servizi critici.
 
 ## 8. Autenticazione e autorizzazione
-- Autenticazione tramite email e password per login.
-- Hashing/salting password con bcrypt per sicurezza.
-- Generazione token JWT con algoritmo HMAC SHA256 e segreto configurato.
-- Filtro Bear che valida token JWT per esplorare e permettere accesso solo a utenti autenticati.
-- Nessuna gestione ruoli o permessi avanzati prevista.
-- Token reset password generati univoci, temporanei e memorizzati per verifica.
-- Protezione endpoint API tramite filtro JWT Bear.
+- Autenticazione stateless tramite token JWT firmati HMAC o RSA, con durata 1 ora.
+- Nessuna autorizzazione granulare prevista, tutti gli utenti autenticati accedono agli endpoint protetti.
+- Middleware verifica presenza, validità e scadenza del token JWT, rigetta se non valido.
+- Limiti tentativi login e reset per prevenire bruteforce.
+- Password memorizzate solo in forma hashed con salt (bcrypt).
 
 ## 9. Gestione errori
-- Risposte API coerenti con codici HTTP:
-  - 200 OK per successo
-  - 201 Created per registrazione riuscita
-  - 400 Bad Request per dati non validi
-  - 401 Unauthorized per autenticazione fallita o token invalido
-  - 409 Conflict per email già registrata
-  - 500 Internal Server Error per errori imprevisti
-- Messaggi di errore chiari e non eccessivamente descrittivi per sicurezza.
-- Gestione edge cases: token scaduti, token manomessi, tentativi login multipli falliti con blocco temporaneo.
-- Centralizzazione gestione errori in middleware o handler per consolidare logica.
-- Logging errori e eventi critici per audit e monitoraggio.
+- Risposte uniformi in formato JSON con campi:
+  - error_code: stringa codice errore (es: VALIDATION_FAILED, EMAIL_CONFLICT, UNAUTHORIZED)
+  - message: descrizione leggibile errore.
+- Codici HTTP coerenti:
+  - 200-201 per successo
+  - 400 per validazione e errori client
+  - 401 per autenticazione fallita
+  - 409 per conflitti (es. email già presente)
+  - 429 per limiti superati
+  - 500 per errori interni server
+- Logging errori critici con stacktrace cifrati e consultabili in modo sicuro.
+- Messaggi di errore non espongono dettagli riservati.
 
 ## 10. Strategia di test backend
 
-### UserModule - Registrazione
-- test_register_user_success (integration)
-  - Verifica registrazione con email e password validi
-  - Input: email valida, password conforme
-  - Output: HTTP 201 con messaggio successo
-- test_register_user_duplicate_email (integration)
-  - Verifica errore su email già registrata
+### Registrazione
+- test_register_user_success
+  - Tipo: unit, integration
+  - Verifica: registrazione con dati validi produce 201 e utente nel DB
+  - Input: email valida unica, password conforme
+  - Expected output: 201, messaggio successo
+- test_register_user_duplicate_email
+  - Tipo: unit, integration
+  - Verifica: registrazione con email già esistente produce 409
   - Input: email duplicata
-  - Output: HTTP 409 Conflict
+  - Expected output: 409 con errore EMAIL_CONFLICT
+- test_register_user_invalid_password
+  - Tipo: unit
+  - Verifica: password non conforme produce 400
+  - Input: password corta o senza simboli
+  - Expected output: 400 VALIDATION_FAILED
 
-### AuthModule - Login
-- test_login_success (integration)
-  - Verifica login con credenziali corrette
+### Login
+- test_login_success
+  - Tipo: unit, integration
+  - Verifica: login corretto restituisce JWT valido
   - Input: email e password corrette
-  - Output: HTTP 200, token JWT valido
-- test_login_fail_wrong_password (integration)
-  - Verifica errore credenziali errate
-  - Input: password errata
-  - Output: HTTP 401 Unauthorized
-- test_login_block_after_multiple_failures (integration)
-  - Verifica blocco login dopo tentativi falliti multipli
-  - Input: 5 tentativi falliti consecutivi
-  - Output: HTTP 401 con blocco attivo
+  - Expected output: 200 con token JWT
+- test_login_wrong_password
+  - Tipo: unit
+  - Verifica: password errata produce 401
+  - Input: credenziali errate
+  - Expected output: 401 UNAUTHORIZED
+- test_login_limit_reached
+  - Tipo: integration
+  - Verifica: superamento tentativi blocca login (429)
+  - Input: tentativi ripetuti errati
+  - Expected output: 429 Too Many Requests
 
-### ResetPasswordModule
-- test_reset_password_request_exists_email (integration)
-  - Verifica invio email corretto se email esiste
+### Reset Password
+- test_reset_password_request_exists_email
+  - Tipo: integration
+  - Verifica: codice generato e email inviata se email esiste
   - Input: email registrata
-  - Output: HTTP 200 messaggio invio
-- test_reset_password_request_nonexistent_email (integration)
-  - Verifica risposta identica se email non esiste (per sicurezza)
-  - Input: email non presente
-  - Output: HTTP 200 messaggio invio
-- test_reset_password_confirm_success (integration)
-  - Verifica cambio password con token reset valido
-  - Input: token valido, nuova password conforme
-  - Output: HTTP 200 messaggio successo
-- test_reset_password_confirm_expired_token (integration)
-  - Verifica errore con token scaduto
-  - Input: token scaduto
-  - Output: HTTP 401 Unauthorized
+  - Expected output: 200 OK messaggio di invio
+- test_reset_password_request_non_existing_email
+  - Tipo: integration
+  - Verifica: risposta neutra per email non presente
+  - Input: email non registrata
+  - Expected output: 200 OK (non rivelando esistenza)
+- test_reset_password_confirm_success
+  - Tipo: integration
+  - Verifica: reset completato con codice valido e nuova password
+  - Input: codice reset valido, nuova password conforme
+  - Expected output: 200 messaggio successo
+- test_reset_password_confirm_invalid_code
+  - Tipo: integration
+  - Verifica: codice errato o scaduto produce 401
+  - Input: codice non valido/scaduto
+  - Expected output: 401 UNAUTHORIZED
 
-### Security and Performance
-- test_password_hashing_security (unit)
-  - Verifica password non memorizzata in chiaro
-- test_jwt_token_generation_and_validation (unit)
-  - Verifica corretto funzionamento creazione e validazione token
-- test_api_response_time_login_register (performance)
-  - Input: usual load request login e register
-  - Output: risposta < 200ms
-
-### Error handling
-- test_error_responses_on_invalid_inputs (integration)
-  - Input: dati malformati / token manomessi
-  - Output: codici HTTP 400, 401 appropriati
-
-### Integration Tests
-- test_email_sending_mocked (integration)
-  - Verifica invio email con sistema email esterno simulato
+### Sicurezza
+- test_jwt_auth_middleware_valid_token
+  - Tipo: unit
+  - Verifica: accesso endpoint protetto con token valido passa
+- test_jwt_auth_middleware_invalid_or_missing_token
+  - Tipo: unit
+  - Verifica: token mancante o invalido produce 401
+- test_input_validation_prevents_injection
+  - Tipo: unit
+  - Verifica: input malformati o potenzialmente pericolosi respinti
 
 ## 11. Rischi tecnici
-- Dipendenza da sistema esterno email, con possibilità rilievi ritardi o vulnerabilità esterne.
-- Mancanza di revoca esplicita token JWT o logout può consentire uso di token compromessi fino alla scadenza.
-- Rischio denial of service legato a blocchi tentativi login se non configurato con adeguata tolleranza.
-- Policy password base potrebbe non coprire scenari di sicurezza avanzati futuri.
-- Possibilità di attacchi replay sui token JWT non mitigati a livello MVP.
-- Limitato monitoraggio e alerting potrebbe risultare insufficiente in produzione.
-- Mancanza gestione ruoli limita futura estendibilità funzionale.
+- Mancata conferma email potrebbe permettere account non validi o abusivi.
+- Assenza dettagliata di strategia retry/fallback servizio email può bloccare reset password.
+- Mancanza di refresh token limita UX e usabilità futura.
+- Vulnerabilità brute force se limiti tentativi o monitoraggio non adeguati.
+- Mancanza di test prestazionali espliciti riduce certezza su prestazioni reali.
+- Gestione concorrenza registrazione potrebbe causare duplicati se locking DB non perfetto.
+- Logging e monitoraggio devono rispettare compliance di sicurezza, rischi se male configurati.
+- Estensione futura limitata da assenza autorizzazioni granulari e MFA.
 
 ## 12. Struttura file proposta
-```plaintext
-auth-backend/
-  Main.java                   # Entry point dell'applicazione - public static void main(String[] args)
+``` 
+project_root/
+  main.java                   # Entry point applicazione —  public class Main { public static void main(String[] args) }
   config/
-    Settings.java             # Configurazioni applicative - class Settings
+    Settings.java             # Configurazione app — class Settings { dbConfig, jwtConfig, emailConfig }
   models/
-    User.java                 # Entità User - class User {id, email, passwordHash, createdAt}
-    ResetToken.java           # Entità ResetToken - class ResetToken {id, userId, token, expiry}
-    AuthLog.java              # Entità AuthLog - class AuthLog {id, userId, eventType, timestamp, ip}
-  repository/
-    UserRepository.java       # Accesso dati User - interface UserRepository {findByEmail, save, ...}
-    ResetTokenRepository.java # Accesso dati ResetToken - interface ResetTokenRepository {...}
-    AuthLogRepository.java    # Accesso dati log autenticazione - interface AuthLogRepository {...}
-  service/
-    UserService.java          # Logica business utenti - class UserService {register, validatePassword, ...}
-    AuthService.java          # Login e generazione JWT - class AuthService {login, generateJwt, validateJwt}
-    ResetPasswordService.java # Gestione reset password - class ResetPasswordService {requestReset, confirmReset}
-    EmailService.java         # Integrazione invio email - interface EmailService {sendResetEmail}
-  security/
-    PasswordHasher.java       # Hashing password bcrypt - class PasswordHasher {hash, verify}
-    JwtTokenProvider.java     # JWT gestione token - class JwtTokenProvider {generateToken, validateToken}
-    JwtAuthFilter.java        # Filtro Bear per protezione endpoint - class JwtAuthFilter {doFilter}
+    User.java                 # Modello User — class User { Long id; String email; String passwordHash; LocalDateTime createdAt; }
+    ResetToken.java           # Modello ResetToken — class ResetToken { Long id; Long userId; String code; LocalDateTime expiresAt; boolean used; }
+  repositories/
+    UserRepository.java       # Accesso dati utenti — interface UserRepository { User findByEmail(...); void save(...); }
+    ResetTokenRepository.java # Accesso dati token reset — interface ResetTokenRepository
+  services/
+    AuthService.java          # Logica autenticazione e registrazione — class AuthService { registerUser(), login(), generateJwt() }
+    ResetPasswordService.java # Logica reset password — class ResetPasswordService { requestReset(), confirmReset() }
+    ValidationService.java    # Validazione input — class ValidationService { validateEmail(), validatePassword() }
+    EmailService.java         # Invio email con retry — class EmailService { sendEmail() }
+    EventLogger.java          # Logging eventi critici — class EventLogger { logLoginEvent(), logResetEvent() }
+    MetricsMonitor.java       # Monitoraggio metriche e tentativi — class MetricsMonitor { incrementLoginAttempts(), isBlocked() }
+  middlewares/
+    JwtAuthMiddleware.java    # Middleware Bear per verifica JWT — class JwtAuthMiddleware { handle(Request req, Response res) }
   controllers/
-    AuthController.java       # Endpoint REST autenticazione - class AuthController {register, login, resetRequest, resetConfirm}
-  exceptions/
-    ApiException.java         # Eccezioni personalizzate API - class ApiException
-    ApiExceptionHandler.java  # Gestione centrale errori - class ApiExceptionHandler {handleExceptions}
-  logging/
-    AuthLogger.java           # Logging eventi critici autenticazione - class AuthLogger {logEvent}
+    UserController.java       # Endpoint REST — class UserController { register(), login(), resetPasswordRequest(), resetPasswordConfirm() }
+  utils/
+    HashUtil.java             # Hashing password bcrypt — class HashUtil { hash(), verify() }
+    JwtUtil.java              # Generazione e verifica JWT — class JwtUtil { generateToken(), verifyToken() }
   tests/
-    AuthControllerTest.java   # Test funzionali endpoint auth
-    UserServiceTest.java      # Test unitari UserService
-    AuthServiceTest.java      # Test unitari AuthService
-    ResetPasswordServiceTest.java # Test ResetPasswordService
-    PerformanceTest.java      # Test performance login/registrazione
-    IntegrationEmailMockTest.java # Test integrazione email simulata
+    AuthServiceTest.java      # Test unit/integration AuthService
+    ResetPasswordServiceTest.java # Test unit/integration ResetPasswordService
+    ValidationServiceTest.java    # Test unit validation
+    JwtAuthMiddlewareTest.java    # Test middleware JWT
 ```
 
 ## 13. Piano di implementazione
-1. Definizione schema dati PostgreSQL per users, reset_tokens, auth_logs.
-2. Implementazione modelli Entity e repository per accesso DB.
-3. Implementazione UserService con validazioni e hashing password.
-4. Implementazione AuthService con login, verifica password e JWT generation.
-5. Configurazione Bear framework con JwtAuthFilter per protezione endpoint.
-6. Implementazione AuthController con endpoint register, login e protezione.
-7. Implementazione ResetPasswordService con generazione token reset, memorizzazione e invio email tramite EmailService.
-8. Implementazione endpoint reset-password request e confirm in AuthController.
-9. Implementazione blocco tentativi login falliti e mitigazioni CSRF a livello applicativo.
-10. Implementazione logging evento critici autenticazione e reset password.
-11. Gestione centralizzata errori con ApiException e ApiExceptionHandler.
-12. Setup HTTPS a livello ambientale (documentazione da aggiornare).
-13. Scrittura test unitari, integration, performance secondo piano test definito.
-14. Verifica criteri acceptance, tuning blocchi login, e refactoring finale.
-15. Documentazione architettura, API, e configurazioni sicurezza in ambiente produzione.
+1. Definire schema database utenti e token, creare script di migrazione con Liquibase/Flyway.
+2. Implementare modelli e repository per utenti e reset token.
+3. Sviluppare module ValidationService per validazione email e password.
+4. Realizzare AuthService con logica registrazione e login, inclusa hashing password e generazione JWT.
+5. Implementare JwtAuthMiddleware per protezione endpoint.
+6. Sviluppare ResetPasswordService con generazione codice temporaneo, invio email (EmailService) e conferma reset.
+7. Implementare UserController con endpoint REST: /register, /login, /reset-password/request, /reset-password/confirm.
+8. Integrare EventLogger per logging eventi critici e MetricsMonitor per monitoraggio tentativi.
+9. Configurare pool connessioni DB e parametri di timeout per performance.
+10. Scrivere test unitari e di integrazione per tutte le componenti critiche.
+11. Eseguire test di carico e performance con report, ottimizzare se necessario per rispettare soglia <1s.
+12. Estendere documentazione tecnica con dettaglio API, configurazioni, strategy retry email e limiti tentativi.
+13. Deploy e attivazione monitoraggio con alert configurati.
+14. Revisione finale e rilascio MVP.
 
 ## QA Output
 MODULE: QA
 VERSION: 1
 FINAL_STATUS: APPROVED_WITH_CHANGES
 
-## Requisiti coperti
-- Realizzazione backend modulare in Java con Bear framework per autenticazione utenti via REST API.
-- Gestione registrazione utente con validazione email unica e password conforme (min 8 caratteri, lettere e numeri).
-- Login con verifica password e generazione token JWT valido 1 ora.
-- Protezione endpoint tramite filtro/middleware Bear che valida token JWT.
-- Gestione reset password con richiesta token reset valido 15 minuti, memorizzazione e invio email tramite sistema esterno.
-- Cambio password con token reset valido.
-- Persistenza dati utenti, token reset e log eventi su PostgreSQL con schema dettagliato.
-- Hashing e salting password con bcrypt.
-- Implementazione blocco tentativi login falliti e mitigazioni CSRF a livello applicativo.
-- Logging audit eventi critici di autenticazione e reset.
-- Comunicazione HTTPS garantita.
-- API progettate con risposte HTTP e messaggi chiari coerenti con acceptance criteria.
-- Piano di test completo unitari, integration, performance, inclusi casi di errore e edge case.
-- Architettura scalabile e stateless conforme a requisiti di performance e sicurezza.
-- Gestione errori appropriata con codici HTTP 400, 401, 409, 500.
+## 1. Checklist — Copertura requisiti
+* [SI] Utente può registrarsi con email unica e password conforme a policy — La proposta prevede endpoint /register con controllo unicità email, validazione password conforme a policy (min 8 caratteri, lettere, numeri, simboli).
+* [SI] Utente può effettuare login con email/password valide e ricevere token JWT con scadenza — Endpoint /login con verifica credenziali e generazione JWT con scadenza circa 1 ora è definito.
+* [SI] Endpoint protetti rispondono solo se token JWT è presente, valido e non scaduto; altrimenti ritornano errore 401 — JwtAuthMiddleware verifica presenza, validità e scadenza token, risponde 401 se token mancante/invalido.
+* [SI] Reset password consente di inviare codice/link via email e permette modifica password — Endpoint request e confirm per reset password esposti, con invio codice via email e conferma con codice e nuova password.
+* [SI] Password salvate nel database sono hashed con salt sicuro — Uso bcrypt con salt forte è esplicitato nella logica hashing.
+* [SI] Tutte le API validano gli input e impediscono injection o dati non validi — ValidationService presente con chiamate in controller, validazione email e password spiegita.
+* [SI] Log eventi critici sono correttamente registrati e consultabili in modo sicuro — Logging sicuro cifrato di eventi critici previsto con EventLogger e LoggerConfig.
+* [PARZIALE] Il sistema risponde con performance accettabili (es. tempi di risposta inferiori a 1 secondo per endpoint critici) — Architettura modulare, pool connessioni DB e attenzione a scalabilità stateless ci sono, ma mancano metriche o test prestazionali espliciti.
+* [SI] Il sistema scala orizzontalmente senza perdita di funzionalità — Architettura stateless e uso pooling DB confermano supporto a scalabilità orizzontale.
+* [SI] Test di sicurezza base superati (es. tentativi ripetuti login bloccati o limitati) — Limiti tentativi brute force implementati, test dedicati descritti.
+* [SI] Documentazione tecnica completa e aggiornata — Documentazione API, configurazioni e piano implementazione dettagliati sono presenti.
 
-## Requisiti mancanti
-- Conferma email per attivazione account non implementata, coerentemente con scope MVP ma resta punto aperto del PM.
-- Funzionalità di logout esplicito e revoca token JWT non presenti, come da out of scope ma evidenziato come rischio.
-- Meccanismi avanzati di monitoraggio e alerting sono solo accennati e necessitano di ampliamento per ambiente produzione.
-- Non è esplicitamente dettagliata la mitigazione per attacchi replay token JWT; è indicato come rischio e da approfondire.
-- Mancata definizione esplicita di tuning per blocco tentativi login falliti in ottica di denial of service involontari.
+## 2. Checklist — Contratti API
+* [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Tutti i principali endpoint descritti con dettagli completi e esempi.
+* [SI] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Specifiche password, email e codice temporaneo esplicitate.
+* [SI] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Sezione gestione errori definisce formato uniformemente usato con campi "error_code" e "message".
+* [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Codici 200, 201, 400, 401, 409 indicati chiaramente per ogni API.
+* [NO] La strategia di paginazione è definita per le liste (se applicabile) — Non applicabile in MVP (assenza di endpoint di liste), quindi fuori scope.
 
-## Rischi e problemi
-- Dipendenza dal sistema esterno per invio email reset password potrebbe introdurre ritardi o vulnerabilità non gestite direttamente.
-- Assenza di revoca token JWT e logout esplicito lascia un potenziale gap di sicurezza in caso di token compromessi.
-- Policy password base potrebbe non essere sufficiente per scenari con requisiti di sicurezza più stringenti in futuro.
-- Possibile rischio di denial of service causato dal blocco tentativi login se non configurato con adeguata tolleranza.
-- Monitoraggio e logging attualmente limitati potrebbero risultare insufficienti per situazioni di produzione complesse o attacchi avanzati.
-- Mancanza di gestione ruoli o autorizzazioni multiple potrebbe limitare la futura estendibilità del sistema.
+## 3. Checklist — Business logic e scenari limite
+* [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Business logic di registrazione, login, reset password con passaggi dettagliati, inclusi transazioni DB.
+* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Registrazione concorrente con controllo unicità lato DB e locking gestito.
+* [PARZIALE] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Email service previsto con retry e fallback di base, ma senza dettagli approfonditi su circuit breaker o gestione avanzata.
+* [SI] Le regole di business critiche sono esplicite e non ambigue — Regole per password, durata token, limiti di tentativi, gestione codice reset sono chiare e precise.
 
-## Test suggeriti
-- Test funzionali completi per ogni endpoint: registrazione, login, reset password (richiesta e conferma).
-- Test di validazione input (email, password, token) per gestione errori chiari.
-- Test di performance per garantire risposta login e registrazione < 200ms.
-- Test di sicurezza: verifica hashing password, gestione token JWT, blocco tentativi login falliti.
-- Test di integrazione con sistema esterno email simulato per validare corretta invio reset.
-- Test di edge cases: token scaduto, token manomesso, tentativi login multipli falliti.
-- Test di resistenza e scalabilità per garantire statelessness e corretto funzionamento in orizzontale.
-- Test di copertura logging eventi critici consultabile e corretto.
-- Test negativi per errori inattesi e fallback a 500.
+## 4. Checklist — Persistenza e schema dati
+* [SI] Le tabelle/collezioni principali sono definite con i campi e i tipi — Tabelle users e reset_tokens con campi principali e tipi definiti.
+* [SI] Gli indici sono specificati per le colonne usate in query frequenti o join — Indici per email e codice reset dichiarati.
+* [SI] I vincoli di unicità e foreign key sono dichiarati — Unicità email e codice, FK per user_id in reset_tokens menzionati.
+* [SI] La strategia di migrazione dello schema è menzionata — Uso di tool come Liquibase/Flyway indicato e documentato.
 
-## Azioni richieste
-- Implementare o pianificare estensione del monitoraggio e alerting in ottica produzione.
-- Prevedere revisione futura della policy password più stringente e gestione conferma email opzionale.
-- Definire e implementare meccanismi di revoca token JWT o logout per colmare lacune di sicurezza.
-- Approfondire mitigazioni contro attacchi replay su token JWT.
-- Configurare tuning blocco tentativi login per evitare denial of service accidentali.
-- Verificare con team di sicurezza l’impatto delle dipendenze esterne per invio email e adottare contromisure se necessario.
-- Aggiornare documentazione tecnica con dettagli su configurazione ambienti di produzione per HTTPS e sicurezza.
+## 5. Checklist — Strategia di test
+* [SI] Esistono test per i happy path di ogni funzionalità principale — Test registrazione, login, reset password includono i casi di successo.
+* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Test per duplicato email, password errata, codice reset non valido sono presenti.
+* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test di integrazione coprono interazione con DB e simulazione invio email.
+* [SI] I test specificano input e expected output concreti (non generici) — Specifiche dei test includono input esatti e output attesi con codici HTTP.
+
+## 6. Requisiti mancanti
+Nessuno.
+
+## 7. Rischi e problemi
+* ALTA — Mancata conferma email può creare account non validi e potenzialmente abusivi.
+* MEDIA — Strategia retry/fallback del servizio email non sufficientemente dettagliata, rischio blocco reset password.
+* MEDIA — Assenza di meccanismo refresh token limita esperienza utente futura.
+* ALTA — Possibili vulnerabilità brute force se limiti tentativi e monitoraggio non adeguatamente configurati o sufficientemente resilienti.
+* MEDIA — Mancanza di test espliciti di prestazioni limitano certezza su rispetto della soglia 1 secondo.
+* BASSA — Assenza di autorizzazioni granulari limita evoluzioni future ma è fuori scope attuale.
+
+## 8. Azioni richieste
+[PRIORITÀ ALTA] Fornire test o metriche di performance dettagliate che dimostrino la latenza media degli endpoint critici inferiore a 1 secondo.
+
+[PRIORITÀ MEDIA] Estendere la descrizione della strategia di retry e fallback del servizio email con indicazioni più precise e possibili gestione errori a cascata.
+
+[PRIORITÀ MEDIA] Considerare una proposta a futuro per gestione refresh token o mitigazione UX in assenza di refresh, evidenziando impatti.
+
+[PRIORITÀ MEDIA] Documentare in modo più esteso la configurazione e monitoraggio dei limiti tentativi per garantire resilienza a brute force.
+
+Nessun altro requisito impedisce l'approvazione con modifiche.
