@@ -1,61 +1,111 @@
 MODULE: BA VERSION: 1
+
 ## 1. Requisiti funzionali
-- Ricezione ordini tramite API REST da frontend e canali esterni, con validazione degli input lato server.
-- Integrazione con gateway di pagamento Stripe per processi di authorization e capture del pagamento.
-- Workflow ordine completo: validazione dati ordine → pagamento → conferma ordine → gestione spedizione.
-- Gestione asincrona degli eventi di aggiornamento stato ordine tramite consumer su RabbitMQ.
-- Integrazione con servizio esterno di logistica per creazione spedizioni e tracciamento (tracking).
-- Invio notifiche email e push al cliente ad ogni cambio di stato ordine, tramite integrazione con SendGrid.
-- API di backoffice per operatori: visualizzazione lista ordini, dettaglio ordine, gestione rimborso manuale.
-- Gestione magazzino integrata: decremento stock su conferma pagamento, ripristino stock in caso di cancellazione.
-- Audit log di tutte le transizioni di stato ordine per tracciabilità e compliance.
-- Funzionalità di retry automatico in caso di errori temporanei nei servizi payment e logistica.
-- Idempotenza garantita per tutte le operazioni critiche per evitare duplicazioni e incongruenze.
+- Ricezione ordini tramite API REST:
+  - Endpoint per creare un ordine e ricevere i dati necessari (cliente, prodotti, quantità, indirizzo, ecc.)
+  - Validazione degli input lato backend sulla correttezza e completezza dei dati.
+- Integrazione con gateway di pagamento Stripe:
+  - Autorizzazione del pagamento (authorization).
+  - "Capture" dell'importo dopo conferma ordine.
+  - Gestione eventuali errori o rifiuti da Stripe.
+- Workflow di elaborazione ordine con stato e transizioni:
+  - Stati tipici: validazione, pagamento, conferma, spedizione.
+  - Ogni transizione deve essere registrata (audit log).
+  - Gestione rollback o flow alternativo in caso di errore.
+- Consumer asincrono per eventi da RabbitMQ:
+  - Ricezione di eventi di aggiornamento stato ordine da queue.
+  - Elaborazione asincrona affidabile e idempotente di tali eventi.
+- Integrazione con servizio esterno di logistica:
+  - Creazione spedizioni.
+  - Aggiornamento tracking shipment.
+  - Gestione errori e retry.
+- Notifiche a clienti:
+  - Email e push notification.
+  - Trigger a ogni cambio di stato ordine.
+  - Integrazione con SendGrid per l'invio mail.
+- API di backoffice per operatori:
+  - Lista ordini.
+  - Dettaglio ordine.
+  - Operazione di rimborso manuale.
+- Gestione magazzino:
+  - Scalare stock al pagamento confermato.
+  - Ripristinare stock in caso di cancellazione ordine.
+- Idempotenza:
+  - Tutte le operazioni critiche devono prevenire duplicazioni in caso di retry (ad es. payment, stock update).
+- Audit log:
+  - Tracciare tutte le transizioni di stato ordine e operazioni significative.
 
 ## 2. Requisiti non funzionali
-- Latenza delle API inferiore a 200 ms al 95° percentile per garantire buona esperienza utente.
-- Supporto a picchi di carico fino a 500 ordini al minuto, con adeguata scalabilità orizzontale.
-- Persistenza dati con PostgreSQL usando transazioni ACID per garantire coerenza e integrità dati.
-- Comunicazioni sicure via HTTPS; utilizzo di JWT per autenticazione e autorizzazione degli endpoint.
-- Logging strutturato e tracciabilità end-to-end completa per ogni ordine.
-- Resilienza ai guasti con meccanismi di retry e idempotenza.
-- Backup e protezione dei dati in ottica GDPR e sicurezza.
-- Monitoraggio performance e alerting per anomalie operative.
+- Sicurezza:
+  - Autenticazione e autorizzazione JWT per API, specialmente backoffice.
+  - Validazione stringente degli input per prevenire injection e vulnerabilità.
+  - Protezione dati sensibili (es. dati pagamento, informazioni cliente).
+- Performance:
+  - Sistemi di caching dove opportuno per ridurre latenza richieste frequenti backoffice.
+  - Ottimizzazione query PostgreSQL e gestione connessioni.
+- Scalabilità:
+  - Microservizio autonomo e deployabile indipendentemente.
+  - Capacità di scalare in orizzontale per gestire picchi di ordini.
+- Resilienza e affidabilità:
+  - Retry automatico su fallimenti transitori (payment, logistica).
+  - Gestione errori e fallback degli eventi da queue.
+  - Comunicazione asincrona tramite eventi per decoupling.
+- Logging e monitoraggio:
+  - Audit log di stato ordini.
+  - Log errori e warning per troubleshooting.
+  - Monitoraggio health service, throughput richieste, latenza.
+- Consistenza:
+  - Utilizzo di transazioni ACID su PostgreSQL per operazioni critiche (es. pagamento, stock).
+- Idempotenza:
+  - Meccanismi software per prevenire effetti duplicati conseguenti a retry o eventi ripetuti.
 
 ## 3. Ambiguità e domande aperte
-- Dettaglio sulla gestione esatta delle notifiche push (tecnologia, canali supportati, frequenza, opt-out) non specificato. Assunzione: supporto minimo a notifiche push via servizi esterni standard.
-- Comportamento esatto in caso di pagamento fallito o annullato non dettagliato (ordine mantiene stato o rollback completo?). Assunzione: rollback automatico delle risorse se pagamento non confermato.
-- Dettagli sul processo di rimborso manuale (range autorizzato, integrazione con payment gateway) non esplicitati. Assunzione: rimborso gestito solo tramite backoffice con conferma manuale e integrazione tramite Stripe API.
-- Non definito il livello di storicizzazione e retention degli audit log. Assunzione: conservazione audit log minimo 1 anno.
-- Sicurezza e accessi alle API di backoffice non dettagliati, presumibile uso JWT con ruoli.
-- Non specificate le modalità di sincronizzazione o aggiornamento del magazzino da altri sistemi esterni.
+- Dettaglio flusso di rimborso manuale: 
+  - Il rimborso riguarda solo importo pagamento o include anche il ripristino stock? Assunzione: deve gestire entrambi.
+- Cosa succede se il servizio di logistica non è disponibile:
+  - Va previsto un meccanismo di coda o retry? Assunzione: sì, retry automatico previsto da requisito resilienza.
+- Modalità e frequenza delle notifiche push oltre email:
+  - Sono push mobile app o web push? Assunzione: push generiche da integrare tramite SendGrid o altro servizio.
+- Gestione concorrente degli ordini sullo stesso stock:
+  - Serve un lock pessimista o ottimistico per la scalatura stock? Assunzione: gestione tramite transazioni ACID.
+- Livello di dettaglio dei dati nell’audit log:
+  - Solo stati ordine o anche dati modificati? Assunzione: audit dettagliato delle transizioni di stato.
+- Ambito e autorizzazioni dell’API backoffice:
+  - Solo operatori interni o anche partner esterni? Assunzione: operatori interni aziendali.
+- Gestione di ordini parzialmente spediti o parzialmente rimborsati:
+  - Non specificato, ipotizzare gestione semplicistica o future estensioni?
 
 ## 4. Edge case e scenari limite
-- Gestione di ordini duplicati inviati ripetutamente tramite retry API: confermata idempotenza come mitigazione.
-- Eventuali timeout o indisponibilità prolungata di Stripe o servizio logistica: presenza di meccanismi retry ma da dettagliare per casi di failure persistente.
-- Cancellazione ordini in stato intermedio (pagamento in corso o spedizione in corso): scenario da definire per coerenza stock e flusso.
-- Gap temporanei o perdita messaggi nella queue RabbitMQ e loro effetti sullo stato ordine.
-- Gestione ordini di grande volume in parallelo che impattano sul magazzino (concorrenza e lock risorse).
-- Eventuali problemi di scalabilità in caso di superamento picco ordini 500 ordini/minuto.
+- Ordini con pagamenti falliti o autorizzati ma non catturati (timeout gateway).
+- Eventi duplicati o fuori ordine dalla queue RabbitMQ (idempotenza).
+- Aggiornamenti concorrenti dello stesso ordine da più microservizi in parallelo.
+- Fallimento totale del servizio di logistica per tempo prolungato.
+- Massiccia cancellazione ordini e conseguente ripristino stock massivo.
+- Rimozione o cambio di indirizzo cliente dopo conferma ordine ma prima di spedizione.
+- Gestione ordini con prodotti esauriti ma non ancora scalati dal sistema.
+- Scalabilità in caso di picchi di ordini stagionali o promozionali.
+- Timeout o rallentamenti nelle chiamate esterne Stripe o SendGrid.
+- Gestione sicurezza in caso di token JWT scaduti o compromessi.
 
 ## 5. Dipendenze e vincoli
-- Dipendenza dal gateway Stripe per processo pagamento e rimborso.
-- Dipendenza dal servizio logistica esterno per spedizione e tracking.
-- Dipendenza da RabbitMQ per gestione asincrona eventi di aggiornamento stato.
-- Vincolo di utilizzo PostgreSQL con transazioni ACID per garantire coerenza.
-- Vincolo architetturale microservizio autonomo e deployabile indipendentemente.
-- Obbligo di idempotenza su operazioni critiche strettamente collegata a retry e resilienza.
-- Vincolo stack tecnologico: Java, Bear, REST API, PostgreSQL, JWT, SendGrid.
-- Sicurezza garantita tramite HTTPS e autenticazione JWT, necessario adeguato controllo accessi.
+- Dipendenza stretta tra stato ordine e workflow di pagamento e spedizione.
+- Vincolo forte su transazioni ACID PostgreSQL per coerenza stock e ordini.
+- Comunicazione asincrona dipende da RabbitMQ e sua corretta configurazione.
+- Retry automatico presuppone idempotenza di tutte le operazioni critiche.
+- Backend deve essere deployabile come microservizio indipendente senza dipendere da altri moduli.
+- Sicurezza garantita da JWT per autenticazione e autorizzazione.
+- Integrazione con Stripe, SendGrid e servizio logistica richiede API stable e credentials sicure.
+- Audit log deve essere persistente e non modificabile per compliance e tracciabilità.
+- Performance e scalabilità devono garantire esperienza utente fluida e supportare carichi variabili.
 
 ## 6. Requisiti esclusi esplicitamente
-- Non è richiesto sviluppo di frontend o interfacce utente, solo backend REST API.
-- Non è richiesta gestione utenti o autenticazione client oltre al backoffice.
-- Non è richiesto supporto a metodi di pagamento diversi da Stripe.
-- Non è richiesta gestione di campagne marketing o promozioni.
-- Non è richiesta automazione spedizioni oltre alla creazione e tracking tramite servizio esterno.
-- Non è richiesto supporto a più magazzini o scenari multi-warehouse.
-- Non è prevista gestione avanzata di stock non legata a ordini (es. inventario manuale).
-- Non sono previsti canali di vendita offline o integrazione POS.
-
-Il documento chiarisce e struttura in modo completo i requisiti, includendo impliciti importanti come sicurezza, validazione, idempotenza e resilienza.
+- Non è richiesto frontend, solo backend microservizio.
+- Non è prevista gestione completa inventario (solo scalatura e ripristino stock per ordini).
+- Non è previsto sistema di fatturazione o contabilità.
+- Non è richiesto supporto a pagamenti multipli o a più gateway (solo Stripe).
+- Non è richiesto tracking dettagliato della spedizione lato cliente (solo integrazione logistica).
+- Nessuna menzione su supporto multilingua o localizzazione.
+- Non sono richieste funzionalità di marketing o campagne promozionali.
+- Non è previsto supporto per ordini di tipo non e-commerce (es. ordini telefonici).
+- Non sono previsti strumenti di analisi o reporting avanzati lato backoffice.
+- Non è richiesta gestione utenti cliente finale (autenticazione clienti non menzionata).

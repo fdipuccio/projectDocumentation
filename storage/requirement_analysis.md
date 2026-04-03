@@ -1,1 +1,1 @@
-{'project_type': 'fullstack', 'needs_backend': True, 'needs_frontend': True, 'needs_database': True, 'backend_complexity': 'high', 'integration_level': 'low', 'backend_type': 'worker'}
+{'project_type': 'backend', 'needs_backend': True, 'needs_frontend': False, 'needs_database': True, 'backend_complexity': 'high', 'integration_level': 'low', 'backend_type': 'worker'}

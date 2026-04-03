@@ -1,91 +1,88 @@
 MODULE: PM VERSION: 1
 ## 1. Obiettivo
-Sviluppare un backend microservizio per la gestione ordini e-commerce, con integrazione a servizi esterni per pagamento, logistica e notifiche, garantendo scalabilità, resilienza, sicurezza e tracciabilità completa del processo di ordine.
+Sviluppare un backend microservizio per la gestione ordini e-commerce, che includa la ricezione ordini tramite API REST, integrazione con gateway di pagamento Stripe per authorization e capture, workflow di elaborazione ordine, consumo asincrono di eventi da RabbitMQ, integrazione con servizi di logistica esterna, invio di notifiche email/push tramite SendGrid, API di backoffice per operatori per gestione ordini e rimborsi manuali, e gestione magazzino per scalatura e ripristino stock. Il sistema deve garantire sicurezza, resilienza, tracciabilità completa e idempotenza delle operazioni critiche.
 
 ## 2. Contesto e vincoli
-- Microservizio autonomo e deployabile indipendentemente.
-- Persistenza dati obbligatoria su PostgreSQL con transazioni ACID.
-- Comunicazioni sicure via HTTPS con autenticazione e autorizzazione JWT.
-- Integrazione con:
-  - Gateway di pagamento Stripe per authorization, capture, rimborso.
-  - Servizio logistico esterno per creazione spedizioni e tracking.
-  - RabbitMQ per gestione asincrona aggiornamenti stato ordine.
-  - SendGrid per invio notifiche email.
-- Vincoli tecnologici: Java, Bear, REST API, PostgreSQL, JWT, SendGrid.
-- Supporto picchi fino a 500 ordini al minuto.
-- Latenza API < 200ms al 95° percentile.
-- Idempotenza obbligatoria su tutte le operazioni critiche.
-- Logging strutturato e audit logging per transizioni stato ordine.
-- Resilienza con retry automatici su errori temporanei.
-- Conformità GDPR per dati e backup.
+- Architettura microservizio autonomo e deployabile indipendentemente.
+- Persistenza dati su PostgreSQL con transazioni ACID obbligatorie per operazioni critiche.
+- Comunicazione asincrona attraverso RabbitMQ.
+- Integrazione con Stripe per pagamenti (authorization, capture, refund) con idempotenza.
+- Invio notifiche tramite SendGrid e servizi push esterni.
+- Sicurezza tramite autenticazione e autorizzazione JWT, comunicazioni via HTTPS.
+- Audit log di tutte le transizioni di stato ordine, conservato per almeno un anno con natura immutabile.
+- Gestione retry automatico per errori transitori su servizi di pagamento e logistica.
+- Stack tecnologico: Java, REST API, Bear, PostgreSQL, JWT.
 
 ## 3. Assunzioni
-- Notifiche push gestite tramite servizi esterni standard con supporto minimo e possibilità di opt-out.
-- In caso di pagamento fallito o annullato, rollback automatico delle risorse coinvolte (es. stock).
-- Rimborso manuale effettuato esclusivamente da backoffice con conferma e integrazione Stripe.
-- Conservazione audit log per minimo un anno.
-- Autenticazione e controllo accessi API backoffice tramite JWT e ruoli.
-- Non sono previsti flussi di sincronizzazione magazzino da sistemi esterni, focus solo su aggiornamenti da ordini nel microservizio.
+- Il flusso di rimborso manuale gestisce sia il rimborso importo pagamento sia il ripristino stock.
+- Il servizio esterno di logistica, in caso di indisponibilità, sarà gestito con retry automatici.
+- Le notifiche push sono generiche e fornite tramite SendGrid o servizi esterni con supporto opt-out.
+- La gestione concorrente della scalatura stock sarà basata su transazioni ACID di PostgreSQL per garantire coerenza.
+- L'audit log comprende un dettaglio esaustivo delle transizioni di stato ordine ma non necessariamente di tutti i dati modificati.
+- L’API backoffice è destinata esclusivamente a operatori interni aziendali.
+- Non è prevista gestione di ordini parzialmente spediti o rimborsati per la MVP, da valutare in futuri sviluppi.
 
 ## 4. Scope MVP
-- Ricezione ordini tramite API REST con validazione lato server.
-- Workflow ordine: validazione → pagamento (Stripe) → conferma → spedizione.
-- Gestione asincrona aggiornamenti stato ordine tramite consumer RabbitMQ.
-- Integrazione spedizioni e tracking con servizio logistica esterno.
-- Invio notifiche email e push a ogni stato ordine (SendGrid + servizi push esterni).
-- API backoffice per operatori: elenco ordini, dettaglio, gestione rimborso manuale.
-- Gestione magazzino integrata con decremento stock a pagamento confermato e ripristino in caso di cancellazione.
-- Audit log completo delle transizioni stato ordine.
-- Meccanismi di retry e idempotenza per resilienza.
-- Logging strutturato e monitoraggio performance.
+- Endpoint API REST per creazione e ricezione ordini con validazione input backend.
+- Integrazione piena con Stripe per pagamento (authorization e capture).
+- Workflow ordine completo con stati e registrazione delle transizioni in audit log.
+- Consumer RabbitMQ per eventi di aggiornamento stato ordine, con elaborazione idempotente.
+- Integrazione base con servizio logistica per creazione spedizioni e aggiornamenti tracking con retry.
+- Invio notifiche email e push via SendGrid ad ogni cambio stato ordine.
+- API backoffice per operatori: lista ordini, dettaglio ordine e rimborso manuale completo di stock.
+- Gestione stock: decremento al pagamento confermato e ripristino su cancellazione o rimborso.
+- Gestione sicurezza tramite JWT per autenticazione e autorizzazione API.
+- Logging strutturato e audit compliance minima 1 anno.
 
 ## 5. Out of scope
-- Sviluppo di frontend o interfacce utente.
-- Gestione utenti o autenticazione client oltre backoffice.
-- Supporto a metodi di pagamento diversi da Stripe.
-- Gestione campagne marketing o promozioni.
-- Automazione avanzata spedizioni oltre creazione/tracking.
-- Supporto multi-magazzino o inventario manuale.
-- Canali vendita offline o integrazione POS.
-- Dettagli avanzati di sincronizzazione magazzino esterno.
+- Frontend o interfacce utente diverse dalle API backend.
+- Gestione completa inventario oltre scalatura e ripristino stock per ordini.
+- Sistemi di fatturazione o contabilità.
+- Supporto a più gateway di pagamento oltre Stripe.
+- Tracking spedizione dettagliato lato cliente.
+- Supporto multilingua o localizzazione.
+- Funzionalità marketing, campagne promozionali o ordini non e-commerce.
+- Gestione utenti cliente finale o autenticazione clienti.
+- Reporting analitico o strumenti di analisi avanzata backoffice.
+- Gestione ordini parzialmente spediti o rimborsati nella MVP.
 
 ## 6. Task tecnici ordinati
-1. Progettazione schema dati in PostgreSQL con transazioni ACID.
-2. Sviluppo API REST per ricezione ordini con validazione input.
-3. Integrazione gateway Stripe per authorization/capture e rimborso.
-4. Implementazione workflow ordine con stati e transizioni.
-5. Implementazione consumer RabbitMQ per aggiornamenti asincroni.
-6. Integrazione con servizio logistica per creazione spedizioni e tracking.
-7. Implementazione invio notifiche email/push via SendGrid e servizi push.
-8. Sviluppo API backoffice per visualizzazione ordini, dettaglio e gestione rimborso.
-9. Gestione magazzino con aggiornamento stock basato su esito pagamento e cancellazioni.
-10. Audit log di tutte le transizioni stato ordine con retention minima 1 anno.
-11. Implementazione meccanismi idempotenza su operazioni critiche.
-12. Gestione retry automatico su errori temporanei per payment e logistica.
-13. Logging strutturato e monitoraggio di performance e anomalie.
-14. Implementazione sicurezza: HTTPS, JWT con controllo ruoli.
-15. Testing completo (happy path e scenari di errore).
+1. Definizione modello dati ordini, pagamenti, stock, audit log conforme ACID.
+2. Sviluppo API REST per ricezione ordini con validazione backend.
+3. Implementazione integrazione Stripe per authorization, capture e rimborso.
+4. Realizzazione workflow ordine come state machine con logging transizioni.
+5. Sviluppo consumer RabbitMQ per eventi aggiornamento stato ordine con idempotenza.
+6. Integrazione con servizio esterno logistica per creazione spedizioni e tracking, con retry.
+7. Implementazione invio notifiche email e push tramite SendGrid.
+8. Sviluppo API backoffice per gestione ordini: listaggio, dettaglio e rimborso manuale.
+9. Implementazione logica gestione magazzino: scalatura e ripristino stock.
+10. Applicazione sicurezza JWT su tutte le API con validazione token e gestione errori.
+11. Predisposizione audit log persistente, immutabile e compliance GDPR.
+12. Realizzazione sistema retry automatico per integrazioni esterne.
+13. Testing unitario, integrazione e di sicurezza.
+14. Deployment microservizio e configurazione monitoring e alerting.
 
 ## 7. Acceptance criteria
-- API rispondono entro 200ms al 95° percentile.
-- Capacità di gestire picchi fino a 500 ordini/minuto senza perdita dati.
-- Tutte le operazioni critiche sono idempotenti, prevenendo duplicazioni.
-- Workflow ordine completato con corretta integrazione pagamento e spedizione.
-- Aggiornamenti stato ordine gestiti correttamente e asincroni tramite RabbitMQ.
-- Notifiche email e push inviate a ogni cambio stato ordine.
-- Backoffice consente visualizzazione ordini e gestione rimborso manuale integrato.
-- Magazzino aggiornato correttamente a pagamento confermato e cancellazioni.
-- Audit log completo e consultabile per almeno 1 anno.
-- Retry automatico attivo e funzionale per errori temporanei.
-- Comunicazioni e autenticazioni conformi a HTTPS/JWT/GDPR.
-- Nessun crash o perdita di dati in caso di errori o timeout con servizi esterni.
-- Test funzionali documentati e superati.
+- API REST ordini che accettano e validano input corretti e rifiutano invalidi.
+- Pagamenti Stripe autorizzati, catturati e rimborsati con successo, con idempotenza garantita.
+- Workflow ordine attivo con stati e transizioni tracciate su audit log.
+- Eventi RabbitMQ processati in modo affidabile, senza duplicazioni.
+- Servizio logistica integrato con retry configurati e gestione errori.
+- Notifiche email e push inviate correttamente ad ogni stato ordine.
+- API backoffice funzionante per listare ordini, visualizzarne dettagli e gestire rimborsi manuali.
+- Stock aggiornato coerentemente con pagamenti e cancellazioni.
+- Autenticazione e autorizzazione JWT attiva e funzionante per tutte le API protette.
+- Audit log persistente almeno per un anno, immutabile e consultabile.
+- Microservizio deployato, monitorato e performante sotto carico previsto.
+- Test completati con copertura soddisfacente e errori gestiti correttamente.
 
 ## 8. Rischi e punti aperti
-- Dettagli implementativi non specificati su notifiche push (servizi, canali, opt-out).
-- Gestione annunciata solo a livello di assunzione: rollback ordine su pagamento fallito da validare.
-- Processo rimborso manuale da dettagliare con l'integrazione Stripe.
-- Gestione cancellazione ordini in stati intermedi da definire con precisione per coerenza magazzino.
-- Possibili problemi di concorrenza su aggiornamento stock in casi di ordini paralleli elevati.
-- Gestione failure persistenti e fallback su Stripe o logistica da approfondire.
-- Sicurezza e autorizzazioni backoffice da implementare conformemente a policy aziendali.
+- Gestione ordini parzialmente spediti o rimborsati non specificata e rimandata.
+- Possibili picchi elevati di richieste con rischio di rallentamenti o locking database.
+- Coordinamento con servizi esterni (Stripe, logistica, SendGrid) e gestione dei loro downtime.
+- Eventuali limitazioni o scadenze token JWT potrebbero impattare usabilità API.
+- Dettaglio delle notifiche push e loro integrazione esterna può richiedere ulteriori chiarimenti.
+- Necessità di definire politiche di retention e backup audit log per compliance.
+- Potenziali race condition concorrenti su aggiornamenti stock in scenari di alta concorrenza.
+- Adozione delle corrette strategie di retry e fallback per resilienza.
+- Privacy e sicurezza dati sensibili lato pagamenti e clienti devono essere garantite secondo GDPR.

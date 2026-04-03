@@ -3,61 +3,62 @@ VERSION: 1
 FINAL_STATUS: APPROVED_WITH_CHANGES
 
 ## 1. Checklist — Copertura requisiti
-- [SI] API rispondono entro 200ms al 95° percentile — Il backend definisce target di performance espliciti (200ms al 95° percentile) e include monitoraggio.
-- [SI] Capacità di gestire picchi fino a 500 ordini/minuto senza perdita dati — Architettura, retry e resilienza indicano supporto per 500 ordini/min.
-- [SI] Tutte le operazioni critiche sono idempotenti, prevenendo duplicazioni — Idempotenza integrata in operazioni critiche con chiavi idempotency.
-- [SI] Workflow ordine completato con corretta integrazione pagamento e spedizione — Flussi descritti con stati ordine, pagamenti Stripe e spedizioni logistica.
-- [SI] Aggiornamenti stato ordine gestiti correttamente e asincroni tramite RabbitMQ — Consumer RabbitMQ dedicato gestito con DLQ e idempotenza.
-- [SI] Notifiche email e push inviate a ogni cambio stato ordine — Notifiche SendGrid e push integrate, con retry e gestione errori.
-- [SI] Backoffice consente visualizzazione ordini e gestione rimborso manuale integrato — API backoffice previste con autorizzazione JWT ruolo operatore.
-- [SI] Magazzino aggiornato correttamente a pagamento confermato e cancellazioni — Gestione stock con transazioni ACID e rollback su cancellazioni.
-- [SI] Audit log completo e consultabile per almeno 1 anno — Audit log definito con retention minima, consultabile via API backoffice.
-- [SI] Retry automatico attivo e funzionale per errori temporanei — Strategie retry, circuit breaker e rollback esplicitate per integrazioni esterne.
-- [SI] Comunicazioni e autenticazioni conformi a HTTPS/JWT/GDPR — HTTPS obbligatorio, JWT con controllo ruoli e compliance GDPR dichiarate.
-- [PARZIALE] Nessun crash o perdita di dati in caso di errori o timeout con servizi esterni — Strategie di retry e rollback ci sono, ma gestione fallback su guasti persistenti parzialmente dettagliata.
-- [SI] Test funzionali documentati e superati — Piano test dettagliato con unit, integrazione ed E2E con input/output concreti.
+- [SI] API REST ordini che accettano e validano input corretti e rifiutano invalidi — API ben definite con validazione input e gestione errori 400
+- [SI] Pagamenti Stripe autorizzati, catturati e rimborsati con successo, con idempotenza garantita — Implementazione PaymentService con retry e idempotenza
+- [SI] Workflow ordine attivo con stati e transizioni tracciate su audit log — Flusso stato ordine e logging immutabile dettagliato previsto
+- [SI] Eventi RabbitMQ processati in modo affidabile, senza duplicazioni — Consumer eventi idempotenti e gestione dead letter queue
+- [SI] Servizio logistica integrato con retry configurati e gestione errori — Client logistica con circuit breaker e retry in proposta
+- [SI] Notifiche email e push inviate correttamente ad ogni stato ordine — NotificationService con SendGrid e retry
+- [SI] API backoffice funzionante per listare ordini, visualizzarne dettagli e gestire rimborsi manuali — Endpoints dedicati con controllo ruoli operatori
+- [SI] Stock aggiornato coerentemente con pagamenti e cancellazioni — Gestione stock con locking pessimista e transazioni ACID
+- [SI] Autenticazione e autorizzazione JWT attiva e funzionante per tutte le API protette — Middleware JWT con controllo ruoli
+- [PARZIALE] Audit log persistente almeno per un anno, immutabile e consultabile — Append-only e immutabile presente, ma retention/backup non dettagliati completamente
+- [SI] Microservizio deployato, monitorato e performante sotto carico previsto — Pipeline CI/CD e monitoraggio pianificati
+- [SI] Test completati con copertura soddisfacente e errori gestiti correttamente — Tipologie e copertura test ben descritte
 
 ## 2. Checklist — Contratti API
-- [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Tutti i principali endpoint descritti con esempi JSON completi.
-- [PARZIALE] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Validazione lato server menzionata, ma regole campo per campo non completamente dettagliate.
-- [SI] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Struttura errori standard con errorCode, errorMessage e dettagli opzionali.
-- [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Codici HTTP specificati uniformemente.
-- [SI] La strategia di paginazione è definita per le liste (se applicabile) — Paginazione esplicitata per liste ordini e audit log con parametri page, size.
+- [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto
+- [PARZIALE] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Validazioni di base presenti, ma dettaglio regex/formati non esplicito
+- [PARZIALE] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Codici HTTP dichiarati, ma formato error response non uniformemente dettagliato
+- [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint
+- [SI] La strategia di paginazione è definita per le liste (se applicabile)
 
 ## 3. Checklist — Business logic e scenari limite
-- [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Workflow ordine dettagliato con stato, pagamento, spedizione e rollback.
-- [PARZIALE] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Rischi di concorrenza menzionati con locking e transazioni, ma implementazione dettagliata da specificare.
-- [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Retry, circuit breaker e DLQ definiti chiaramente.
-- [PARZIALE] Le regole di business critiche sono esplicite e non ambigue — Regole generali chiare ma alcuni casi di cancellazione ordini intermedi poco definiti.
+- [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche)
+- [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition)
+- [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker)
+- [PARZIALE] Le regole di business critiche sono esplicite e non ambigue — Alcune ambiguità residue su notifiche push e retention audit log
 
 ## 4. Checklist — Persistenza e schema dati
-- [PARZIALE] Le tabelle/collezioni principali sono definite con i campi e i tipi — Tabelle principali elencate ma campi e tipi non dettagliati.
-- [NO] Gli indici sono specificati per le colonne usate in query frequenti o join — Nessuna menzione esplicita degli indici per ottimizzazione query.
-- [PARZIALE] I vincoli di unicità e foreign key sono dichiarati — Accennato schema normalizzato e vincoli, ma senza dettaglio specifico.
-- [NO] La strategia di migrazione dello schema è menzionata — Nessuna indicazione su migrazioni DB o versionamento schema.
+- [PARZIALE] Le tabelle/collezioni principali sono definite con i campi e i tipi — Entità elencate ma schema dettagliato tabellare mancante
+- [PARZIALE] Gli indici sono specificati per le colonne usate in query frequenti o join — Non esplicitamente documentati
+- [PARZIALE] I vincoli di unicità e foreign key sono dichiarati — Menzionati ma non descritti nel dettaglio
+- [NO] La strategia di migrazione dello schema è menzionata — Mancanza di indicazioni su migrazione, update e rollback schema
 
 ## 5. Checklist — Strategia di test
-- [SI] Esistono test per i happy path di ogni funzionalità principale — Test dettagliati di happy path per creazione, recupero, rimborso e aggiornamenti asincroni.
-- [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Test specifici per gestione errori e autorizzazione.
-- [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test integrazione previsti per servizi esterni e DB.
-- [SI] I test specificano input e expected output concreti (non generici) — Input e output esplicitati chiaramente.
+- [SI] Esistono test per i happy path di ogni funzionalità principale
+- [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized)
+- [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni)
+- [SI] I test specificano input e expected output concreti (non generici)
 
 ## 6. Requisiti mancanti
-- Gestione fallback completa in caso di guasti persistenti su Stripe e servizio logistico non è completamente dettagliata.
-- Definizione e specifica dei campi di validazione per tutte le richieste API non è esaustiva.
-- Dettaglio su indici DB e strategia di migrazione schema mancante.
-- Regole precise per scenari di cancellazione ordini intermedi non sono completamente esplicitate.
+- Strategia di migrazione schema database assente.
+- Dettaglio formato uniforme e schema errori API da completare.
+- Definizione più precisa di retention e backup audit log.
+- Specifica dettagliata degli indici DB e vincoli di integrità.
+- Maggior dettaglio regole di validazione input (es. formati e regex per campi).
 
 ## 7. Rischi e problemi
-- [ALTA] Gestione concorrenza su aggiornamento stock e ordini, rischio race condition se locking non implementato correttamente.
-- [ALTA] Gestione fallback su guasti persistenti Stripe e servizio logistica potrebbe causare blocchi workflow.
-- [MEDIA] Volume elevato dati audit log con possibili impatti su performance e archiviazione.
-- [MEDIA] Mancata definizione precisa per notifiche push e opt-out può ridurre esperienza utente e compliance.
-- [ALTA] Sicurezza JWT e controllo ruolo fondamentale per evitare escalation privilegi.
+- ALTA: Race condition e locking su stock in scenari di alta concorrenza.
+- ALTA: Downtime e errori dei servizi esterni (Stripe, logistica, SendGrid) possono impattare resilienza.
+- MEDIA: Mancanza di migrazione schema potrebbe causare problemi in evoluzione produzione.
+- MEDIA: Ambiguità su retention audit log può compromettere compliance GDPR.
+- MEDIA: Complessità gestione token JWT e possibile scadenza impattano usabilità API.
+- BASSA: Dettaglio notifiche push e politiche opt-out da definire meglio.
 
 ## 8. Azioni richieste
-- [ALTA] Definire in maniera completa e dettagliata strategie di fallback e recovery per guasti persistenti nei servizi esterni (Stripe, logistica).
-- [ALTA] Specificare regole dettagliate di validazione per ogni campo delle API, inclusi formati e obbligatorietà.
-- [MEDIA] Documentare indice DB specifici per le colonne più interrogate e definire strategia di migrazione schema (versionamento, rollback).
-- [MEDIA] Dettagliare regole di business e casi limite per cancellazione ordini in stato intermedio.
-- [BASSA] Definire e specificare dettagli per notifiche push e gestione opt-out per compliance e UX.
+- [PRIORITÀ ALTA] Definire e documentare strategia di migrazione schema database con rollback e versioning.
+- [PRIORITÀ ALTA] Uniformare formato e struttura JSON degli errori API con esempi concreti.
+- [PRIORITÀ MEDIA] Dettagliare regole di validazione input, includendo formati, obbligatorietà e regex.
+- [PRIORITÀ MEDIA] Documentare indici DB e vincoli di integrità per garantire performance e coerenza.
+- [PRIORITÀ MEDIA] Specificare politiche di retention, backup e eliminazione audit log in conformità GDPR.
