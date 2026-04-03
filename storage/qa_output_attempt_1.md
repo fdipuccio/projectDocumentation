@@ -1,51 +1,59 @@
 MODULE: QA
 VERSION: 1
-FINAL_STATUS: REJECTED
+FINAL_STATUS: APPROVED_WITH_CHANGES
 
 ## 1. Checklist — Copertura requisiti
-[NO] Utente può registrarsi con email unica e password conforme a policy — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Utente può effettuare login con email/password valide e ricevere token JWT con scadenza — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Endpoint protetti rispondono solo se token JWT è presente, valido e non scaduto; altrimenti ritornano errore 401 — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Reset password consente di inviare codice/link via email e permette modifica password — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Password salvate nel database sono hashed con salt sicuro — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Tutte le API validano gli input e impediscono injection o dati non validi — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Log eventi critici sono correttamente registrati e consultabili in modo sicuro — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Il sistema risponde con performance accettabili (es. tempi di risposta inferiori a 1 secondo per endpoint critici) — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Il sistema scala orizzontalmente senza perdita di funzionalità — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Test di sicurezza base superati (es. tentativi ripetuti login bloccati o limitati) — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
-[NO] Documentazione tecnica completa e aggiornata — Non è possibile verificare la copertura perché non è disponibile il contenuto della proposta backend.
+* [SI] Un utente può registrarsi usando solo email e password con password memorizzata in modo sicuro — La proposta backend prevede hashing e salting password, email unica, validazione formale e gestione errori (409 email duplicata).
+* [SI] Login con email e password restituisce token JWT valido e firmato con scadenza predefinita — JwtService genera token firmato con durata configurabile, login con verifica credenziali è previsto.
+* [SI] Endpoint di registrazione, login, reset password sono pubblici; tutti gli altri endpoint sono accessibili solo con token JWT valido — Chiaramente definito in proposta con middleware di protezione e elenco endpoint pubblici.
+* [SI] Reset password invia correttamente un link di reset temporaneo all’email indicata senza rivelare se l’email è registrata o no — EmailService con invio link reset temporaneo e risposta generica è specificato.
+* [SI] Password deboli o email duplicate generano errori espliciti ma non dettagli sulla sicurezza — Validazione input con messaggi generici e gestione 409 per duplicati sono specificati.
+* [SI] Tutte le comunicazioni avvengono via HTTPS — HTTPS obbligatorio è assunto con configurazione ambiente menzionata.
+* [SI] Logging centralizzato registra eventi di autenticazione senza esporre dati sensibili — LoggingService con anonimizzazione e conformità GDPR prevista.
+* [SI] Validazioni input impediscono injection e altri attacchi comuni — InputValidator con validazioni su email e password è indicato.
+* [SI] Il sistema scala orizzontalmente mantenendo la validità dei token JWT — Architettura stateless con JWT e durata fissa senza revoca è confermata.
+* [SI] Nessun supporto per social login, ruoli, conferma email o reset avanzato è presente — Esplicitamente esclusi e assenti nella proposta.
 
 ## 2. Checklist — Contratti API
-[NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Nessuna evidenza disponibile.
-[NO] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Nessuna evidenza disponibile.
-[NO] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Nessuna evidenza disponibile.
-[NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Nessuna evidenza disponibile.
-[NO] La strategia di paginazione è definita per le liste (se applicabile) — Nessuna evidenza disponibile.
+* [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Post /register, /login, /reset-password e protetto GET sono completamente descritti.
+* [SI] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Email RFC valida, password con minimo 8 caratteri, obbligatorietà chiara.
+* [SI] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Errori sono JSON con campo "error" nelle risposte 4xx, coerenza evidenziata.
+* [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — 201, 400, 409, 200, 401 sono usati consistentemente e documentati.
+* [NO] La strategia di paginazione è definita per le liste (se applicabile) — Non applicabile perché non vi sono endpoint di lista o paginazione nel perimetro.
 
 ## 3. Checklist — Business logic e scenari limite
-[NO] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Nessuna evidenza disponibile.
-[NO] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Nessuna evidenza disponibile.
-[NO] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Nessuna evidenza disponibile.
-[NO] Le regole di business critiche sono esplicite e non ambigue — Nessuna evidenza disponibile.
+* [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Flussi di registrazione, login, reset password e middleware per JWT sono dettagliati con step precisi.
+* [PARZIALE] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Verifica e gestione email duplicata prevista, ma mancata menzione esplicita di gestione race condition atomica o lock DB.
+* [NO] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Non sono riportate strategie di gestione errori per SMTP o DB in caso di fallimento.
+* [SI] Le regole di business critiche sono esplicite e non ambigue — Regole chiare su validazione, scadenza token, endpoint protetti e pubblici, errori generici.
 
 ## 4. Checklist — Persistenza e schema dati
-[NO] Le tabelle/collezioni principali sono definite con i campi e i tipi — Nessuna evidenza disponibile.
-[NO] Gli indici sono specificati per le colonne usate in query frequenti o join — Nessuna evidenza disponibile.
-[NO] I vincoli di unicità e foreign key sono dichiarati — Nessuna evidenza disponibile.
-[NO] La strategia di migrazione dello schema è menzionata — Nessuna evidenza disponibile.
+* [SI] Le tabelle/collezioni principali sono definite con i campi e i tipi — Tabella utenti con id, email unica, password_hash, salt, created_at, updated_at specificati.
+* [SI] Gli indici sono specificati per le colonne usate in query frequenti o join — Email vincolata unica implicitamente indice.
+* [PARZIALE] I vincoli di unicità e foreign key sono dichiarati — Vincolo unique su email è menzionato, ma non sono presenti foreign key né discussa loro gestione (ma probabilmente non applicabile).
+* [NO] La strategia di migrazione dello schema è menzionata — Non è menzionata alcuna strategia di migrazione/versioning schema DB.
 
 ## 5. Checklist — Strategia di test
-[NO] Esistono test per i happy path di ogni funzionalità principale — Nessuna evidenza disponibile.
-[NO] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Nessuna evidenza disponibile.
-[NO] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Nessuna evidenza disponibile.
-[NO] I test specificano input e expected output concreti (non generici) — Nessuna evidenza disponibile.
+* [SI] Esistono test per i happy path di ogni funzionalità principale — Test di registrazione, login, reset password con esito positivo definiti.
+* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Test su email duplicata, invalidi credenziali, assenza token sono inclusi.
+* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test integrati con DB e mock invio email sono descritti.
+* [SI] I test specificano input e expected output concreti (non generici) — Test con input JSON ed esiti HTTP concreti riportati.
 
 ## 6. Requisiti mancanti
-Tutta la proposta backend non è stata fornita e quindi non è possibile verificare i requisiti.
+- Mancanza di strategia di gestione errori per integrazione fallita con SMTP (retry, fallback).
+- Mancanza di strategia per migrazione schema DB.
+- Assenza di strategie esplicite per condizioni di concorrenza oltre il controllo unicità email.
 
 ## 7. Rischi e problemi
-- ALTA: Mancanza di informazioni – impossibile eseguire QA.
-- ALTA: Rischio di non conformità alla specifica PM se la proposta backend mancante.
+- [ALTA] Assenza di meccanismi anti-brute force espone a rischio attacchi forza bruta su login.
+- [ALTA] Mancata revoca token JWT può consentire accessi non autorizzati in caso di token compromessi.
+- [MEDIA] Mancata gestione o indicazione di strategie su fallimenti integrazioni esterne (SMTP) può causare malfunzionamenti funzionalità reset password.
+- [MEDIA] Assenza strategia migrazione schema rischia downtime o inconsistenza nel deploy su DB evoluti.
+- [BASSA] Limitata trattazione concorrenza oltre controllo unicità potrebbe causare rare condizioni di errori o duplicati.
 
 ## 8. Azioni richieste
-[ALTA] Fornire il documento completo della proposta backend per poter eseguire la revisione di qualità puntuale secondo la specifica PM.
+[PRIORITÀ ALTA] Definire e implementare una strategia di gestione errori per integrazione SMTP con retry o fallback per garantire affidabilità invio email reset password.  
+[PRIORITÀ ALTA] Integrare un piano di migrazione schema DB per gestione evolutiva strutture dati in produzione.  
+[PRIORITÀ MEDIA] Documentare meglio le strategie di gestione concorrenza, inclusa possibile prevenzione race condition nella registrazione utente.  
+[PRIORITÀ BASSA] Valutare e proporre meccanismi anti-brute force (anche se out of scope PM, evidenziare rischio alto).  
+[PRIORITÀ BASSA] Considerare la gestione di revoca token in linee guida future o patch successive.
