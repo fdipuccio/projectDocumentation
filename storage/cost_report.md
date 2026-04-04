@@ -1,13 +1,13 @@
 === TOKEN / COST SUMMARY ===
-  ba                   tokens=  3,655  (prompt=  2,250  completion=  1,405)  requests=1  cost=$0.0646
-  pm                   tokens= 27,071  (prompt= 25,329  completion=  1,742)  requests=2  cost=$0.3055
-  arch-review-1        tokens= 17,980  (prompt= 15,578  completion=  2,402)  requests=3  cost=$0.2278
-  backend-specialists  tokens= 23,459  (prompt= 16,225  completion=  7,234)  requests=3  cost=$0.3793
-  qa                   tokens= 17,104  (prompt= 15,429  completion=  1,675)  requests=2  cost=$0.2045
-  arch-review-1        tokens= 20,682  (prompt= 18,439  completion=  2,243)  requests=4  cost=$0.2517
-  backend-specialists  tokens= 26,364  (prompt= 19,798  completion=  6,566)  requests=4  cost=$0.3950
-  qa                   tokens= 16,206  (prompt= 14,740  completion=  1,466)  requests=2  cost=$0.1914
-  arch-review-1        tokens= 33,100  (prompt= 30,466  completion=  2,634)  requests=4  cost=$0.3837
-  backend-specialists  tokens= 33,027  (prompt= 25,619  completion=  7,408)  requests=4  cost=$0.4784
-  qa                   tokens= 16,675  (prompt= 14,973  completion=  1,702)  requests=2  cost=$0.2008
-  TOTAL                tokens=235,323  (prompt=198,846  completion= 36,477)  requests=31  cost=$3.0828
+  ba                   tokens=  4,006  (prompt=  2,237  completion=  1,769)  requests=1  cost=$0.0754
+  pm                   tokens=  5,249  (prompt=  3,725  completion=  1,524)  requests=1  cost=$0.0830
+  arch-review-1        tokens= 18,561  (prompt= 15,683  completion=  2,878)  requests=3  cost=$0.2432
+  backend-specialists  tokens= 28,700  (prompt= 22,058  completion=  6,642)  requests=4  cost=$0.4198
+  qa                   tokens= 15,753  (prompt= 14,081  completion=  1,672)  requests=2  cost=$0.1910
+  arch-review-1        tokens= 24,423  (prompt= 21,664  completion=  2,759)  requests=4  cost=$0.2994
+  backend-specialists  tokens= 30,126  (prompt= 22,918  completion=  7,208)  requests=4  cost=$0.4454
+  qa                   tokens= 16,903  (prompt= 15,270  completion=  1,633)  requests=2  cost=$0.2017
+  arch-review-1        tokens= 20,737  (prompt= 18,419  completion=  2,318)  requests=4  cost=$0.2537
+  backend-specialists  tokens= 28,046  (prompt= 21,492  completion=  6,554)  requests=4  cost=$0.4115
+  qa                   tokens= 15,313  (prompt= 13,490  completion=  1,823)  requests=2  cost=$0.1896
+  TOTAL                tokens=207,817  (prompt=171,037  completion= 36,780)  requests=31  cost=$2.8138

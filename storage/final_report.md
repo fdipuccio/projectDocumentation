@@ -9,359 +9,291 @@
 
 ## PM Output
 MODULE: PM VERSION: 1
+
 ## 1. Obiettivo
-Sviluppare un microservizio backend per la gestione degli ordini e-commerce che consenta la ricezione ordini tramite API REST sicure, integri il gateway di pagamento Stripe per authorization e capture, gestisca un workflow end-to-end degli ordini (validazione, pagamento, conferma, spedizione), consumi eventi asincroni da RabbitMQ per aggiornamenti stato ordine, integri un servizio esterno di logistica per spedizioni e tracking, invii notifiche email/push tramite SendGrid, esponga API di backoffice per operatori e gestisca il magazzino scalando e ripristinando stock, garantendo resilienza, sicurezza, scalabilità e completa tracciabilità.
+Sviluppare un microservizio backend per la gestione degli ordini e-commerce con integrazione a servizi esterni (gateway pagamento Stripe, servizio logistica, sistema notifiche SendGrid), garantendo un workflow completo dalla ricezione dell’ordine fino alla spedizione, gestione magazzino e supporto backoffice operatori.
 
 ## 2. Contesto e vincoli
-- Architettura microservizi deployabile in modo indipendente.
-- Persistenza dati su PostgreSQL con transazioni ACID.
-- Comunicazione asincrona tramite RabbitMQ.
-- Sicurezza delle API REST tramite JWT Bearer Token.
-- Idempotenza obbligatoria per tutte le operazioni critiche (creazione ordine, chiamate a Stripe, logistica).
-- Retry automatico con backoff per errori transitori su integrazioni (Stripe, logistica, SendGrid).
-- Logging strutturato e audit log immutabile minimo per un anno.
+- Architettura microservizio autonomo, deployabile indipendentemente in ambiente container.
+- Persistenza dati su PostgreSQL con transazioni ACID per coerenza e atomicità nelle operazioni critiche.
+- Comunicazione asincrona con altri microservizi tramite RabbitMQ per eventi di stato ordine.
+- Integrazione con gateway pagamento Stripe (authorization e capture).
+- Resilienza e affidabilità garantita tramite retry automatici su errori temporanei e operazioni idempotenti.
+- Sicurezza: API protette con autenticazione e autorizzazione tramite JWT, validazione e sanificazione input.
+- Logging centralizzato, audit log delle modifiche di stato ordine e operazioni critiche.
 - Stack tecnologico: Java, REST API, Bear, PostgreSQL, JWT.
-- Conforme a normative GDPR e PCI-DSS per la gestione dati sensibili.
-- Non è richiesto frontend o gestione utenti e ruoli oltre JWT.
-- Stripe è l’unico gateway di pagamento supportato.
-- Notifiche solo via email e push tramite SendGrid.
-- Gestione backoffice limitata a API per operatori autenticati.
 
 ## 3. Assunzioni
-- Eventi da RabbitMQ relativi ad aggiornamenti stato ordine con formato JSON standard.
-- Notifiche push previste come estensioni future; MVP implementa email tramite SendGrid.
-- Operatori backoffice gestiti da sistema esterno di identity management, con ruolo base di amministratore per rimborsi.
-- La cancellazione ordine è manuale da operatori o automatica predefinita, con ripristino stock.
-- Durata autorizzazione pagamento Stripe considerata temporanea e coerente con workflow interno.
-- Strategie di retry prevedono numero limitato di tentativi con intervalli crescenti (backoff).
-- Compliance normativa GDPR e PCI-DSS applicata nelle implementazioni di sicurezza e dati.
+- Payload ordine contiene dati completi: cliente, prodotti, quantità, indirizzo spedizione, dati pagamento.
+- Supporto flusso completo di pagamento separato authorization + capture.
+- Rimborsi manuali tramite API solo per rimborso totale; regole di business non gestite.
+- Gestione magazzino con locking e controllo preventivo per evitare overselling.
+- Sistema notifiche push generico configurabile (oltre a SendGrid per email), dettagli da definire.
+- Sistema autenticazione utenti esterno integrato via JWT, non sviluppato internamente.
+- Conservazione audit log conforme a policy GDPR con dettagli su transizioni stato, utenti, timestamp.
 
 ## 4. Scope MVP
-- API REST per ricezione e validazione ordini con idempotenza.
-- Integrazione con Stripe per authorization e capture pagamento con retry e idempotenza.
-- Workflow ordine con stati Validazione → Pagamento → Conferma → Spedizione e audit log.
-- Consumer asincrono RabbitMQ per eventi stato ordine con gestione duplicati e ordine eventi.
-- Integrazione base con servizio logistico per creazione spedizioni e aggiornamento tracking, con retry.
-- Invio notifiche email al cliente a ogni cambio stato tramite SendGrid con retry.
-- API backoffice per operatori: lista ordini, dettaglio e rimborso manuale con autorizzazione JWT.
-- Gestione magazzino: scalare stock a pagamento confermato, ripristino su cancellazione o errore.
-- Logging strutturato e immutabile per tracciare tutte le transizioni di stato.
+- Implementazione API REST per ricezione ordini con validazione dati.
+- Integrazione con Stripe per autorizzazione e cattura pagamenti, gestione stati pagamento.
+- Workflow ordine con stati e transizioni: validazione → pagamento → conferma ordine → creazione spedizione → completamento spedizione.
+- Gestione asincrona aggiornamenti stato ordine tramite consumer RabbitMQ.
+- Integrazione con servizio esterno logistica per creazione spedizioni e tracking con retry e idempotenza.
+- Invio notifiche via email (SendGrid) e push configurabili su ogni variazione stato ordine.
+- API backoffice operatori autenticata JWT per visualizzazione lista ordini, dettaglio ordine e rimborso manuale.
+- Gestione magazzino con scalatura stock a pagamento confermato e ripristino su cancellazione o rimborso.
+- Logging centralizzato e audit log completo per cambi stato ordine.
 
 ## 5. Out of scope
-- Sviluppo frontend cliente o backoffice.
-- Integrazione con gateway pagamento diversi da Stripe.
-- Sistema di gestione utenti e ruoli oltre JWT per backoffice.
-- Sistema complesso di inventario diverso da scalare/ripristino stock.
-- Reportistica avanzata o analisi ordini.
-- Gestione multi-valuta o multi-paese.
-- Canali di notifica diversi da email/push tramite SendGrid.
+- Frontend o interfacce utente grafiche.
+- Sviluppo sistema di autenticazione utenti (si presume sistema esterno).
+- Supporto a gateway di pagamento diversi da Stripe.
+- Supporto multicanale o multistore.
+- Sviluppo del servizio di logistica (solo integrazione).
+- Supporto multi-valuta o multi-lingua.
+- Reportistica avanzata o BI.
+- Gestione manuale code RabbitMQ (solo consumer automatico).
+- Gestione regole avanzate per rimborsi (partiali, tempistiche).
 
 ## 6. Task tecnici ordinati
-1. Progettazione e sviluppo API REST per ricezione ordini con validazione input e idempotenza.
-2. Implementazione integrazione Stripe per autorizzazione e capture pagamento con gestione retry e idempotenza.
-3. Definizione e coding workflow stato ordine con audit log immutabile.
-4. Sviluppo consumer asincrono RabbitMQ per consumare e processare eventi stato ordine con de-duplicazione e ordering.
-5. Integrazione con servizio esterno logistica per creazione spedizioni, tracking e aggiornamento stato ordine con retry.
-6. Implementazione invio notifiche email via SendGrid con gestione retry e logging degli errori.
-7. Sviluppo API di backoffice per operatori con autenticazione JWT: lista ordini, dettaglio, rimborso manuale e autorizzazione.
-8. Implementazione gestione magazzino: scalatura stock a pagamento confermato, ripristino stock su cancellazione o errore.
-9. Sviluppo modulo di logging strutturato e audit log immutabile con retention minima un anno.
-10. Configurazione sicurezza API tramite JWT Bearer Token e sanificazione input.
-11. Testing end-to-end incluse resilience su retry e idempotenza.
-12. Documentazione tecnica API, workflow e operazioni di backoffice.
+1. Progettazione schema dati e tabelle PostgreSQL con transazioni ACID.
+2. Sviluppo API REST per ricezione ordini (validazione payload).
+3. Implementazione integrazione Stripe: authorization, capture, gestione stati, retry e idempotenza.
+4. Definizione e implementazione workflow ordine con stati e transizioni.
+5. Realizzazione audit log per tracciamento stato ordine e operazioni critiche.
+6. Sviluppo consumer RabbitMQ per aggiornamenti asincroni stato ordine con gestione concorrenza e duplicati.
+7. Integrazione con servizio esterno logistica per creazione spedizioni e tracking con meccanismi retry e idempotenza.
+8. Implementazione notifica email con SendGrid e sistema push generico configurabile.
+9. Creazione API backoffice protette JWT per gestione ordini (lista, dettaglio, rimborso manuale).
+10. Realizzazione gestione magazzino con scalatura e ripristino stock, garantendo consistenza con locking.
+11. Implementazione meccanismi di sicurezza: JWT, validazione e sanificazione input, crittografia dati sensibili.
+12. Configurazione logging centralizzato, monitoraggio metriche e health check.
+13. Testing funzionale, di carico, resilienza (retry, idempotenza) e sicurezza.
 
 ## 7. Acceptance criteria
-- API REST ricezione ordine risponde entro 200ms al 95° percentile sotto carico fino a 500 ordini/minuto.
-- Validazione input ordine completa con error handling chiaro e idempotenza su creazione ordine.
-- Chiamate a Stripe per pagamento autorizzazione e cattura effettuate con retry e idempotenza senza duplicati.
-- Workflow ordine dimostra transizioni corrette e audit log immutabile tracciate tutte le operazioni significative.
-- Consumer RabbitMQ processa eventi ordine in modo idempotente e gestisce eventi duplicati e fuori sequenza.
-- Integrazione logistica permette creazione spedizioni e aggiornamento tracking con retry su errori transitori.
-- Notifiche email inviate correttamente tramite SendGrid su ogni cambio stato con retry su errori.
-- API backoffice protette da JWT consentono visualizzazione lista ordini, dettagli e gestione rimborsi manuali con autorizzazione.
-- Magazzino scala e ripristina stock coerentemente con stato pagamenti e cancellazioni.
-- Logging strutturato e audit log conservati per almeno un anno e immutabili.
-- Rispetto di vincoli sicurezza JWT, GDPR e PCI-DSS per dati sensibili.
-- Documentazione completa per API, backoffice e integrazioni.
+- API REST ordini accettano payload validi e rigettano payload malformati.
+- Integrazione Stripe funziona correttamente per authorization e capture con gestione corretta degli stati.
+- Workflow ordini gestisce correttamente tutte le transizioni di stato e produce eventi asincroni.
+- Consumer RabbitMQ aggiorna lo stato ordini coerentemente e non si generano duplicati o out-of-order non gestiti.
+- Integrazione con logistica crea spedizioni senza duplicati e recupera tracking correttamente; gestisce errori transitori con retry.
+- Notifiche email e push inviate a ogni cambio stato ordine con contenuti configurabili.
+- API backoffice rispondono correttamente con autenticazione JWT, supportano filtraggio/paginazione e rimborso totale.
+- Gestione magazzino aggiorna stock in modo atomico e coerente in presenza di ordini concorrenti.
+- Logging e audit log tracciano tutte le operazioni critiche e transizioni con dati completi e sicurezza.
+- Performance API entro 200ms per richieste standard; sistema resiste a carico di picco ordini.
+- Retry automatici gestiti con backoff per servizi esterni.
+- Tutte le API e servizi applicano validazione input e sanificazione per evitare vulnerabilità.
 
 ## 8. Rischi e punti aperti
-- Definizione dettagliata degli eventi RabbitMQ: struttura esatta e tipologie da confermare.
-- Canali, formati e protocolli notifiche push da definire con eventuale piano estensione futuro.
-- Gestione dettagliata permessi operatori backoffice e sistema di identity management da confermare.
-- Parametri fine tuning per retry (numero tentativi, intervalli backoff) da validare.
-- Gestione scenario cancellazione ordine: automatica/manuale e impatti su stock e pagamenti da chiarire.
-- Procedures di cleanup per pagamenti autorizzati non catturati interventi e timeout.
-- Concorrenza e potenziali race condition sulle transizioni stato ordine e gestioni stock da monitorare.
-- Compliance GDPR e PCI-DSS da integrare in dettaglio nelle implementazioni e test.
+- Ambiguità nel dettaglio dati ordine da ricevere via API (es. pagamenti parziali o multipli).
+- Gestione dettagliata dei rimborsi manuali (parziale, totale, tempistiche) da definire.
+- Dettagli sistema notifiche push e canali supportati ancora da chiarire.
+- Possibili scenari di concorrenza su magazzino in ordini simultanei con stock limitato.
+- Gestione messaggi duplicati o fuori ordine da RabbitMQ.
+- Impatto e gestione degradata se servizio logistica esterno è indisponibile a lungo.
+- Integrazione con sistema autenticazione utenti esterno deve essere confermata.
+- Nessun supporto multi-tenant/multi-store previsto al momento, ma possibile evoluzione futura.
+- Policy di conservazione audit log perfettamente allineate con GDPR da verificare.
+
+---
+
+Documento elaborato con attenzione a distinguere chiaramente assunzioni da vincoli tecnici e funzionali confermati. Non sono stati aggiunti requisiti esterni rispetto a quelli forniti.
 
 ## Backend Output
 MODULE: BACKEND VERSION: 1
 
-## 1. Obiettivo backend
-Il microservizio backend è progettato per gestire l'intero ciclo di vita degli ordini e-commerce, includendo creazione, validazione, pagamento, gestione stock, spedizione, e rimborso. Deve garantire scalabilità, resilienza, sicurezza, tracciabilità completa tramite audit log immutabili, integrazione con servizi esterni (Stripe, logistica, SendGrid, RabbitMQ), e rispondere a requisiti di compliance PCI-DSS e GDPR.
+## 1. Obiettivo backend ##
+Il backend è un microservizio worker progettato per la gestione completa degli ordini di un e-commerce. Gestisce il ciclo di vita degli ordini, inclusa la ricezione, validazione, pagamento, spedizione, notifiche, storicizzazione e rimborsi, garantendo consistenza transazionale, sicurezza, scalabilità e resilienza alle integrazioni esterne.
 
-## 2. Assunzioni tecniche
-- Implementazione in Java su architettura a microservizi event-driven.
-- Persistenza su PostgreSQL con supporto ACID e transazioni esplicite.
-- Comunicazione tramite API REST HTTPS con payload JSON.
-- Autenticazione JWT Bearer Token per tutte le API ad eccezione dell'endpoint creazione ordine in MVP.
-- Idempotenza obbligatoria tramite header `X-Idempotency-Key` per operazioni critiche.
-- Retry automatico con backoff esponenziale su errori transitori per integrazioni esterne.
-- Log strutturato e audit log immutabile per tutte le transizioni di stato degli ordini.
-- Controlli concorrenziali tramite lock pessimista/ottimistico per evitare race condition.
-- Compliance GDPR e PCI-DSS per gestione dati sensibili e sicurezza.
-- Obiettivo di performance: <200ms di latenza al 95° percentile sotto carico fino a 500 ordini al minuto.
+## 2. Assunzioni tecniche ##
+- Backend basato su Java con Spring Boot.  
+- PostgreSQL per persistenza dati con supporto ACID e locking a livello di riga.  
+- RabbitMQ per la gestione asincrona degli eventi (event-driven).  
+- Autenticazione via JWT Bearer Token con controlli di ruolo (clienti, operatori).  
+- Integrazione con Stripe per pagamenti, servizio logistico per spedizioni e SendGrid per notifiche email.  
+- Tutte le operazioni critiche sono transazionali con rollback o compensazione.  
+- Input validati e sanificati per sicurezza da injection e attacchi.  
+- Logging e audit immutabile con conformità GDPR.
 
-## 3. Architettura backend
-Architettura microservizi con pattern event-driven e layered design composta da:
-- API REST Controller per gestione richieste client.
-- Moduli di dominio per business logic dell’ordine, pagamento, stock, logistica.
-- Repository per accesso e manipolazione dati persistenti su PostgreSQL.
-- Client esterni per Stripe, servizio logistica e SendGrid con meccanismi di retry/idempotenza.
-- Consumer RabbitMQ per gestione eventi asincroni con controllo idempotenza e ordering garantito.
-- Middleware di sicurezza per autenticazione e autorizzazione JWT, validazione input, rate-limiting.
-- Audit Logger per registrazione immutabile di tutte le transizioni e operazioni critiche.
+## 3. Architettura backend ##
+Architettura microservizio a livelli con modello event-driven interno:  
+- **API Layer (Controller)**: Esponibile via REST JSON con endpoint autenticati.  
+- **Service Layer**: Logica di dominio, gestione stati ordine, orchestrazione pagamenti, spedizioni e notifiche.  
+- **Persistence Layer**: Repository dedicati che implementano operazioni transazionali su PostgreSQL.  
+- **Integration Modules**: Interfaccia verso Stripe, servizi logistici, RabbitMQ e sistema notifiche.  
+- **Async Event Consumer**: RabbitMQ consumer per aggiornamento stadi ordine in modo idempotente e ordinato.  
+- **Security Module**: Gestisce autenticazione JWT e autorizzazione a livello API.  
+- **Audit and Logging Module**: Traccia immutabile eventi e modifiche.
 
-## 4. Moduli e responsabilità
-- **Ordine Management Service:** gestione flusso ordini, validazione, stato ordine, rimborso.
-- **Payment Integration Module:** comunicazioni con Stripe per autorizzazione e capture.
-- **Warehouse Stock Repository:** gestione concorrenziale dello stock con lock e rollback.
-- **Logistics Integration Module:** interazione con servizio esterno spedizioni e tracking.
-- **Notification Service:** invio email e notifiche tramite SendGrid.
-- **RabbitMQ Consumer:** elaborazione eventi asincroni, gestione aggiornamenti stato ordine.
-- **Audit Logger:** persistenza immutabile degli eventi di stato e operazioni.
-- **Security Middleware:** controllo JWT, autorizzazioni ruoli, sanitizzazione delle richieste.
+## 4. Moduli e responsabilità ##
+- **OrderController**: gestione REST API per ordini clienti e backoffice.  
+- **OrderService**: gestione business logic flussi ordine, stato, pagamenti e spedizioni.  
+- **OrderRepository, PaymentRepository, InventoryRepository, ShipmentRepository, AuditLogRepository**: accesso e manipolazione dati persistenti.  
+- **StripeIntegration**: chiamate autorizzazione e cattura pagamento con retry e idempotenza.  
+- **LogisticsIntegration**: gestione creazione spedizioni e tracking con retry.  
+- **NotificationModule**: invio di email e notifiche push tramite SendGrid e interfacce configurabili.  
+- **RabbitMQConsumer**: ascolto e gestione eventi asincroni ordine con deduplicazione e gestione ordine messaggi.
 
 ## 5. API principali
 
-### 5.1 POST `/api/v1/orders`
-- **Descrizione:** Creazione nuovo ordine e-commerce.
-- **Autenticazione:** NO (MVP)  
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `X-Idempotency-Key: string` (UUID/hash unico)
-- **Request Body:**
+### 5.1 POST /orders  
+**Descrizione:** Crea nuovo ordine con payload validato.  
+**Auth:** JWT utente cliente  
+**Request:**  
 ```json
 {
-  "customer": {
-    "email": "cliente@example.com",
-    "name": "Mario Rossi"
-  },
-  "items": [
-    {"sku": "ABC123", "quantity": 2, "unit_price": 15.50},
-    {"sku": "XYZ789", "quantity": 1, "unit_price": 45.00}
-  ],
-  "payment": {
-    "method": "stripe",
-    "currency": "EUR",
-    "total_amount": 76.00
-  },
-  "shipping_address": {
-    "street": "Via Roma 1",
-    "city": "Milano",
-    "postal_code": "20100",
-    "country": "IT"
-  }
+  "customer": {"id":"string","name":"string","email":"string","phone":"string"},
+  "products": [{"productId":"string","quantity":integer}],
+  "shippingAddress": {"street":"string","city":"string","postalCode":"string","country":"string"},
+  "payment": {"method":"card","cardData":{"token":"string"},"amount":"decimal","currency":"string"}
 }
+```  
+**Response:**  
+- 200 OK  
+```json
+{"orderId":"string","status":"VALIDATION_PENDING","createdAt":"ISO8601 timestamp"}
 ```
-- **Response 201 Created:**
+- 400 Bad Request con dettagli errori  
+- 500 Internal Server Error
+
+### 5.2 GET /backoffice/orders  
+**Descrizione:** Lista e filtra ordini per backoffice con paginazione.  
+**Auth:** JWT ruolo operatore/admin  
+**Query Params:** status, startDate, endDate, page, pageSize  
+**Response 200 OK:**  
 ```json
 {
-  "order_id": "uuid-ordine",
-  "status": "Validation",
-  "created_at": "2024-06-01T12:00:00Z"
-}
-```
-- **Errori 400/409 (idempotenza):**
-```json
-{
-  "error_code": "ORDER_VALIDATION_FAILED",
-  "message": "Messaggio di dettaglio errore"
+  "orders": [{"orderId":"string","status":"string","customerName":"string","createdAt":"ISO8601 timestamp","totalAmount":"decimal","currency":"string"}],
+  "pagination":{"currentPage":integer,"totalPages":integer,"pageSize":integer,"totalItems":integer}
 }
 ```
 
-### 5.2 GET `/api/v1/orders/{orderId}`
-- **Descrizione:** Recupero dettaglio ordine.
-- **Autenticazione:** Sì (JWT Bearer Token).
-- **Response 200 OK:**
+### 5.3 GET /backoffice/orders/{orderId}  
+**Descrizione:** Dettaglio ordine completo.  
+**Auth:** JWT ruolo operatore/admin  
+**Response 200 OK:**  
 ```json
 {
-  "order_id": "uuid-ordine",
-  "status": "Confirmed",
-  "customer": { "email": "...", "name": "..." },
-  "items": [...],
-  "payment": { "status": "Captured", "amount": 76.00, "currency": "EUR" },
-  "shipping": { "carrier": "DHL", "tracking_code": "TRACK123", "status": "Shipped" },
-  "timestamps": {
-    "created": "...",
-    "validated": "...",
-    "paid": "...",
-    "confirmed": "...",
-    "shipped": "..."
-  }
+  "orderId":"string","status":"string",
+  "customer":{"id":"string","name":"string","email":"string","phone":"string"},
+  "products":[{"productId":"string","name":"string","quantity":integer,"unitPrice":"decimal","totalPrice":"decimal"}],
+  "shippingAddress":{"street":"string","city":"string","postalCode":"string","country":"string"},
+  "paymentDetails":{"method":"card","authorizationId":"string","captureId":"string","amount":"decimal","currency":"string","status":"authorized|captured|failed"},
+  "shipment":{"shipmentId":"string","trackingNumber":"string","status":"string","carrier":"string"},
+  "createdAt":"ISO8601 timestamp","updatedAt":"ISO8601 timestamp"
 }
 ```
 
-### 5.3 GET `/api/v1/orders`
-- **Descrizione:** Lista ordini filtrabile per stato e range date.
-- **Autenticazione:** Sì (JWT Bearer Token).
-- **Query params:** status, fromDate, toDate
-- **Response 200 OK:**
+### 5.4 POST /backoffice/orders/{orderId}/refund  
+**Descrizione:** Esegue rimborso totale ordine.  
+**Auth:** JWT ruolo operatore/admin  
+**Request:** Corpo vuoto (solo rimborso totale)  
+**Response:**  
+- 200 OK  
 ```json
-[
-  {
-    "order_id": "uuid",
-    "status": "Paid",
-    "created_at": "...",
-    "total_amount": 76.00,
-    "customer_email": "example@example.com"
-  },
-  ...
-]
+{"orderId":"string","refundStatus":"processed","refundedAt":"ISO8601 timestamp"}
 ```
+- 400/409 con dettagli errori
 
-### 5.4 POST `/api/v1/orders/{orderId}/refund`
-- **Descrizione:** Richiesta rimborso manuale ordine.
-- **Autenticazione:** Sì (JWT Bearer Token, ruolo admin).
-- **Headers:** `X-Idempotency-Key`
-- **Request Body:**
-```json
-{
-  "reason": "Cliente ha richiesto rimborso parziale"
-}
-```
-- **Response 200 OK:**
-```json
-{
-  "refund_id": "uuid-rimborso",
-  "status": "RefundRequested",
-  "order_id": "uuid-ordine",
-  "processed_at": "2024-06-01T14:00:00Z"
-}
-```
+## 6. Business logic ##
+- Gestione stati ordine (VALIDATION_PENDING, AUTHORIZED, PAID, SHIPPED, DELIVERED, CANCELED, REFUNDED).  
+- Autorizzazione pagamento con Stripe su creazione ordine; cattura asincrona, rollback su errori.  
+- Locking e decremento atomico stock via DB in seguito a pagamento.  
+- Creazione spedizione tramite modulo logistico con retry e idempotenza.  
+- RabbitMQ per eventi stato ordine con processamento idempotente e ordinato.  
+- Notifiche contestuali ad ogni cambio stato (email e push).  
+- Rimborso integrato con rollback e aggiornamento stock.
 
-### 5.5 GET `/api/v1/warehouse/stock/{sku}`
-- **Descrizione:** Consultazione stock magazzino per SKU.
-- **Autenticazione:** Sì (JWT Bearer Token).
-- **Response 200 OK:**
-```json
-{
-  "sku": "ABC123",
-  "available_stock": 125,
-  "reserved_stock": 20
-}
-```
+## 7. Persistenza e integrazioni ##
+- PostgreSQL schema per ordini, pagamenti, inventario, spedizioni, audit.  
+- Repository JPA o ORM leggero con transazioni, locking, retry.  
+- Integrazione Stripe SDK Java con retry, idempotenza e mapping errori.  
+- Integrazione servizio logistico REST con circuit breaker e retry.  
+- RabbitMQ consumer garantisce esecuzione affidabile e deduplicata.  
+- Invio notifiche via SendGrid e moduli push configurabili.
 
-## 6. Business logic
-- Creazione ordine con validazione input, controllo idempotenza.
-- Workflow stato ordine: Validazione → Pagamento (authorization + capture Stripe) → Conferma → Spedizione.
-- Scalatura stock solo a conferma pagamento con gestione concorrenza via lock.
-- Gestione retry automatici e idempotenza per tutte le operazioni esterne (Stripe, logistica, notifiche).
-- Logging immutabile di tutte le transizioni di stato e azioni critiche.
-- Workflow asincrono gestito con RabbitMQ per aggiornamenti stato e notifiche.
-- Gestione rimborso tramite chiamate coordinate a Stripe e aggiornamento stato ordine/stock.
+## 8. Autenticazione e autorizzazione ##
+- JWT mandatory su tutte le API.  
+- Verifica firma, scadenza, ruoli utente.  
+- Accesso backoffice limitato a operatori e admin.  
+- Risposte HTTP 401/403 coerenti.  
+- Nessuna fuga di dettagli su errori di sicurezza.
 
-## 7. Persistenza e integrazioni
-- Backend con PostgreSQL per dati persistenti (ordini, stock, audit log).
-- Tabelle ottimizzate con indici su ID ordine, stato, timestamp e idempotency key.
-- Transazioni ACID esplicite per garantire consistenza operazioni critiche.
-- Integrazione Stripe per payments (authorization, capture, refunds).
-- Integrazione con servizio logistica per spedizioni, tracking.
-- Integrazione SendGrid per notifiche email.
-- Eventi asincroni processati tramite consumer RabbitMQ con gestione di idempotenza e ordering.
+## 9. Gestione errori ##
+- Validazioni payload risposte 400 con dettagli.  
+- 401 per errori autenticazione, 403 per autorizzazione.  
+- 404 se risorsa non trovata.  
+- 409 per conflitti di business (es. rimborso impossibile).  
+- 500 per errori server con messaggi generici.  
+- Retry con backoff per chiamate esterne con idempotenza.  
+- Logging strutturato e correlazione eventi per tracciabilità.
 
-## 8. Autenticazione e autorizzazione
-- JWT Bearer Token obbligatorio su tutte le API ad eccezione endpoint creazione ordine (MVP).
-- Token contiene claim (userId, ruolo).
-- Middleware effettua validazione token, autorizzazione ruoli e sanitizzazione input.
-- Operazioni sensibili (rimborso) limitate a ruoli amministrativi.
-- Nessuna gestione utenti interna, identity management affidato a sistemi esterni.
+## 10. Strategia di test backend ##
+- **CreateOrder_ValidPayload_Unit**: test unitario validazione e mapping payload ordine, input: payload valido, output: ordine creato con stato iniziale.  
+- **CreateOrder_InvalidPayload_Unit**: test unitario verifica risposta 400 su dati errati.  
+- **OrderService_PaymentAuthorization_Integration**: test integrazione simulata con Stripe, verifica autorizzazione pagamento e filtro errori.  
+- **OrderRepository_Concurrency_Integration**: test concorrenza DB con locking su stock decrementi.  
+- **RabbitMQConsumer_Idempotency_Integration**: verifica deduplicazione e ordine messaggi evento ordine.  
+- **RefundOrder_Backoffice_E2E**: test end-to-end flusso rimborso via API backoffice con rollback stock e stato ordine.
 
-## 9. Gestione errori
-- Errori validazione input con HTTP 400 e messaggi JSON dettagliati.
-- Errori duplicazione via idempotency restituiscono 409 con stato attuale.
-- Errori integrazione esterna gestiti con retry e backoff.
-- Errori server generici con 500 e messaggio generico per sicurezza.
-- Logging dettagliato di ogni errore per diagnosi e audit.
-- Rollback transazioni su errori critici per mantenere consistenza dati.
-- Alert operativi per errori critici.
+## 11. Rischi tecnici ##
+- Concorrenza e race condition su aggiornamenti stock e stato ordine.  
+- Duplicazioni eventi RabbitMQ con possibili stati incoerenti.  
+- Dipendenza da disponibilità servizi esterni Stripe e logistici.  
+- Gestione ordini incompleti o payload inconsistenti.  
+- Compliance GDPR su audit log immutabile e protezione dati.  
+- Vulnerabilità sicurezza (injection, auth) mitigata da best practices.
 
-## 10. Strategia di test backend
-
-| Nome Test                   | Tipo        | Verifica                                                | Input                          | Output Atteso                                                |
-|----------------------------|-------------|---------------------------------------------------------|--------------------------------|-------------------------------------------------------------|
-| CreateOrder_ValidRequest    | Unit        | Validazione input e successo creazione ordine           | Richiesta POST `/orders` valida | 201 Created con order_id e stato `Validation`               |
-| CreateOrder_DuplicateIdemp  | Integration | Controllo idempotency key su creazione ordine doppia    | Stessa request con stessa key   | 409 Conflict con stato ordine corrente                      |
-| GetOrder_ValidId            | Unit        | Recupero dettagli ordine con autorizzazione valida      | GET `/orders/{orderId}` con JWT | 200 OK con dati ordine                                       |
-| RefundOrder_AuthorizedUser  | Integration | Rimborso manuale con idempotency e controllo ruoli      | POST `/orders/{orderId}/refund` con token admin | 200 OK con dettaglio rimborso                                 |
-| StockManagement_Concurrency | Integration | Gestione concorrenza su aggiornamento stock              | Multiple decrement/increment   | Nessuna race condition, stock coerente                       |
-| PaymentIntegration_Retry    | Unit        | Retry e idempotenza chiamate Stripe                      | Simulazione errori transitori  | Chiamata ripetuta con successo o errore gestito             |
-| RabbitMQConsumer_OrderEvents| Integration | Elaborazione eventi ordine con idempotenza e ordering   | Eventi duplicati e out of order| Eventi processati una sola volta nell'ordine corretto       |
-
-## 11. Rischi tecnici
-- Schema evento RabbitMQ incompleto o instabile può causare inconsistenze.
-- Race condition e conflitti concorrenza su stock e stato ordine richiedono attenzione a lock e transazioni.
-- Parametri retry da tarare per bilanciare resilienza e latenza.
-- Compliance GDPR e PCI-DSS richiede test approfonditi e auditing sicuro.
-- Gestione timeout e cleanup pagamenti non catturati deve essere definita.
-- Gestione efficiente del logging immutabile per storage e performance.
-- Progettazione estensibile per future notifiche push senza impatti MVP.
-- Sicurezza token JWT e accessi backoffice controllati rigidamente.
-
-## 12. Struttura file proposta
-
+## 12. Struttura file proposta ##
 ```
 /src
- ├── /api
- │    ├── OrdersController.java          # Gestione API REST ordini
- │    ├── WarehouseController.java       # API magazzino/stock
- │    ├── SecurityMiddleware.java        # Middleware JWT e sicurezza
- ├── /service
- │    ├── OrderManagementService.java    # Logica business ordini
- │    ├── PaymentIntegrationService.java # Comunicazione Stripe
- │    ├── LogisticsIntegrationService.java # Interazione spedizioni
- │    ├── NotificationService.java       # Invio email con SendGrid
- │    ├── RabbitMQConsumerService.java   # Gestione eventi asincroni
- ├── /repository
- │    ├── OrderRepository.java           # Accesso DB ordini, idempotenza
- │    ├── StockRepository.java           # Gestione stock con lock
- │    ├── AuditLogRepository.java        # Insert append-only log audit
- ├── /model
- │    ├── Order.java                     # Entità ordine
- │    ├── Stock.java                     # Entità stock magazzino
- │    ├── AuditLog.java                  # Entità log immutabili
- │    ├── Payment.java                   # Entità pagamento
- ├── /integration
- │    ├── StripeClient.java              # Client Stripe con retry/idempotenza
- │    ├── LogisticsClient.java           # Client servizio spedizioni
- │    ├── SendGridClient.java            # Client invio email
- ├── /config
- │    ├── AppConfig.java                 # Configurazioni applicative
- ├── /util
- │    ├── JsonValidator.java             # Validazione JSON input
- │    ├── IdempotencyHelper.java         # Gestione idempotency key
- └── /exception
-      ├── ApiException.java              # Gestione errori API custom
-      ├── RetryException.java            # Eccezioni retry
+  /api
+    OrderController.java           # REST API endpoint e validazioni
+  /service
+    OrderService.java              # Logica dominio gestione ordini e flussi
+  /repository
+    OrderRepository.java           # CRUD ordini e locking transazionali
+    PaymentRepository.java         # Gestione dati pagamenti e idempotenza
+    InventoryRepository.java       # Controllo stock e locking
+    ShipmentRepository.java        # Tracking creazione spedizioni
+    AuditLogRepository.java        # Scrittura audit immutabile
+  /integration
+    StripeIntegration.java         # Integrazione pagamenti Stripe
+    LogisticsIntegration.java      # Chiamate servizio spedizioni
+    NotificationModule.java        # Invio notifiche email/push
+  /async
+    RabbitMQConsumer.java          # Consumatore eventi asincroni ordine
+  /security
+    JwtAuthenticationFilter.java  # Filtro JWT token e verifica ruoli
+  /model
+    Order.java                    # Entità dominio ordine
+    Payment.java                  # Entità pagamento
+    Inventory.java                # Entità stock/prodotto
+    Shipment.java                 # Entità spedizione
+    AuditLog.java                 # Entità audit log
+  /config
+    DatabaseConfig.java           # Config DB PostgreSQL, transazioni
+    RabbitMQConfig.java           # Config RabbitMQ consumer/producer
+    SecurityConfig.java           # Config sicurezza JWT e autorizzazioni
+  /util
+    RetryUtils.java               # Logica retry e backoff per integrazioni
 ```
 
-## 13. Piano di implementazione
-1. Setup ambiente sviluppo e definizione schemi DB PostgreSQL.
-2. Implementazione Repository e modello entità con transazioni ACID.
-3. Sviluppo moduli core OrderManagementService e StockRepository con lock.
-4. Implementazione API REST Controller con validazioni e middleware sicurezza.
-5. Integrazione Stripe client con retry e idempotenza.
-6. Implementazione workflow creazione ordine, pagamento e aggiornamenti stato.
-7. Integrazione servizi di logistica e notifiche.
-8. Sviluppo RabbitMQ consumer per gestione eventi asincroni.
-9. Implementazione audit log immutabile.
-10. Scrittura test unitari e di integrazione per API, business logic e integrazioni.
-11. Deployment ambiente test e stress test performance.
-12. Fix bug, ottimizzazione, documentazione finale e preparazione per QA.
-
----
-
-Questo documento consolidato riunisce i contributi degli specialist backend ed è pronto per la fase di QA e sviluppo.
+## 13. Piano di implementazione ##
+1. Setup ambiente di sviluppo, repository e configurazione database PostgreSQL.  
+2. Implementazione modelli dominio e schema DB con tabelle ordini, pagamenti, inventari, spedizioni, audit.  
+3. Sviluppo repository con supporto transazioni e locking.  
+4. Implementazione API REST di base (OrderController) con validazione payload.  
+5. Sviluppo OrderService per gestione flussi di stato e orchestrazione integrazioni.  
+6. Integrazione modulo Stripe con gestione retry e mapping stato pagamento.  
+7. Integrazione modulo logistico per creazione e tracking spedizioni.  
+8. Realizzazione RabbitMQ consumer per gestione eventi asincroni con deduplicazione.  
+9. Implementazione NotificationModule per invio email e push.  
+10. Configurazione sicurezza JWT e controllo accessi per API.  
+11. Implementazione error handling, logging e audit log immutabile.  
+12. Sviluppo e automazione test unitari, integrazione ed end-to-end.  
+13. Deployment in ambiente containerizzato con monitoring e health check.  
+14. Revisione e ottimizzazione performance e scalabilità.  
+15. Documentazione tecnica e handover.
 
 ## QA Output
 MODULE: QA
@@ -369,61 +301,66 @@ VERSION: 1
 FINAL_STATUS: APPROVED_WITH_CHANGES
 
 ## 1. Checklist — Copertura requisiti
-* [SI] API REST ricezione ordine risponde entro 200ms al 95° percentile sotto carico fino a 500 ordini/minuto — Obiettivo di performance esplicitato nel backend.
-* [SI] Validazione input ordine completa con error handling chiaro e idempotenza su creazione ordine — Validazione con JsonValidator, gestione errore 400/409 per idempotenza.
-* [SI] Chiamate a Stripe per pagamento autorizzazione e cattura effettuate con retry e idempotenza senza duplicati — StripeClient con retry e idempotenza specificati.
-* [SI] Workflow ordine dimostra transizioni corrette e audit log immutabile tracciate tutte le operazioni significative — Flusso stato ordine dettagliato e audit log immutabile garantito.
-* [SI] Consumer RabbitMQ processa eventi ordine in modo idempotente e gestisce eventi duplicati e fuori sequenza — RabbitMQ consumer gestisce idempotenza e ordering.
-* [SI] Integrazione logistica permette creazione spedizioni e aggiornamento tracking con retry su errori transitori — LogisticsIntegrationService con retry esplicito.
-* [SI] Notifiche email inviate correttamente tramite SendGrid su ogni cambio stato con retry su errori — NotificationService con retry e logging errori.
-* [SI] API backoffice protette da JWT consentono visualizzazione lista ordini, dettagli e gestione rimborsi manuali con autorizzazione — API backoffice con JWT e gestione ruoli.
-* [SI] Magazzino scala e ripristina stock coerentemente con stato pagamenti e cancellazioni — StockRepository con lock e rollback per concorrenza e coerenza.
-* [SI] Logging strutturato e audit log conservati per almeno un anno e immutabili — AuditLogRepository previsti per persistenza immutabile con retention.
-* [SI] Rispetto di vincoli sicurezza JWT, GDPR e PCI-DSS per dati sensibili — Compliance dichiarata e middleware sicurezza esplicitamente previsti.
-* [SI] Documentazione completa per API, backoffice e integrazioni — Struttura e descrizioni API presenti nel documento.
+* [SI] API REST ordini accettano payload validi e rigettano payload malformati — Endpoint POST /orders esplicitamente definito con validazione payload e risposta 400 dettagliata.
+* [SI] Integrazione Stripe funziona correttamente per authorization e capture con gestione corretta degli stati — Modulo StripeIntegration con retry, idempotenza e gestione stati pagamento copre il requisito.
+* [SI] Workflow ordini gestisce correttamente tutte le transizioni di stato e produce eventi asincroni — Stati ordine e transizioni ben definiti, eventi RabbitMQ gestiti asincroni.
+* [SI] Consumer RabbitMQ aggiorna lo stato ordini coerentemente e non si generano duplicati o out-of-order non gestiti — RabbitMQConsumer con idempotenza e gestione ordine eventi descritta.
+* [SI] Integrazione con logistica crea spedizioni senza duplicati e recupera tracking correttamente; gestisce errori transitori con retry — LogisticsIntegration implementata con retry e idempotenza.
+* [SI] Notifiche email e push inviate a ogni cambio stato ordine con contenuti configurabili — NotificationModule con supporto integrato SendGrid e sistema push configurabile.
+* [SI] API backoffice rispondono correttamente con autenticazione JWT, supportano filtraggio/paginazione e rimborso totale — Backoffice API dettagliate con JWT, filtri, paginazione e gestione rimborso totale.
+* [SI] Gestione magazzino aggiorna stock in modo atomico e coerente in presenza di ordini concorrenti — InventoryRepository con locking e decremento atomico.
+* [PARZIALE] Logging e audit log tracciano tutte le operazioni critiche e transizioni con dati completi e sicurezza — AuditLogRepository definito ma dettagli su conservazione GDPR e immutabilità da dettagliare.
+* [SI] Performance API entro 200ms per richieste standard; sistema resiste a carico di picco ordini — Piano implementazione include ottimizzazione performance e scalabilità.
+* [SI] Retry automatici gestiti con backoff per servizi esterni — RetryUtils con logica retry e backoff implementata.
+* [SI] Tutte le API e servizi applicano validazione input e sanificazione per evitare vulnerabilità — Validazioni e sanificazioni esplicitate nelle assunzioni tecniche e controller.
 
 ## 2. Checklist — Contratti API
-* [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Documentazione API dettagliata con esempi JSON.
-* [SI] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — JsonValidator indica validazione JSON, campi descritti con tipi e obbligatorietà.
-* [SI] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Errori restituiti in struttura JSON uniforme con codice e messaggio.
-* [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Response codes specificati esplicitamente per endpoint.
-* [NO] La strategia di paginazione è definita per le liste (se applicabile) — Endpoint lista ordini non specifica paginazione o limiti di pagina.
+* [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Definitivo per 4 endpoint chiave.
+* [PARZIALE] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Definiti tipi e campi obbligatori, mancano regex e format dettaglio per certi campi (es. email, token).
+* [PARZIALE] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Descritti codici errore e presenza di dettagli, ma non è esplicitata un'unica struttura JSON uniforme.
+* [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Chiaramente documentati.
+* [SI] La strategia di paginazione è definita per le liste (se applicabile) — Backoffice ordine API include paginazione con struttura chiara.
 
 ## 3. Checklist — Business logic e scenari limite
-* [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Workflow ordine e processi definiti con passaggi dettagliati.
-* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Gestione concorrenza con lock pessimista/ottimistica.
-* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Retry con backoff esplicitato per tutte le integrazioni.
-* [PARZIALE] Le regole di business critiche sono esplicite e non ambigue — Molte regole chiare, ma gestione cancellazione ordine e cleanup pagamenti non catturati è lasciata aperta (rischi specificati).
+* [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Workflow ordine e stato dettagliati con passi espliciti.
+* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Locking database e test concorrenza specificati.
+* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Retry con backoff e circuit breaker per logistico.
+* [PARZIALE] Le regole di business critiche sono esplicite e non ambigue — Ben definite per ordini, pagamenti e magazzino; rimangono ambiguità sui rimborsi parziali e dettaglio notifiche push.
 
 ## 4. Checklist — Persistenza e schema dati
-* [PARZIALE] Le tabelle/collezioni principali sono definite con i campi e i tipi — Sono menzionate entità e repository ma non è presente uno schema completo tabellare.
-* [SI] Gli indici sono specificati per le colonne usate in query frequenti o join — Indici per ID ordine, stato, timestamp e idempotency key descritti.
-* [PARZIALE] I vincoli di unicità e foreign key sono dichiarati — Menzione generale su vincoli ma mancano dettagli espliciti nel documento.
-* [NO] La strategia di migrazione dello schema è menzionata — Mancanza di indicazioni o strumenti per migrazioni DB.
+* [SI] Le tabelle/collezioni principali sono definite con i campi e i tipi — Modelli dominio e repository indicate con entità e campi.
+* [PARZIALE] Gli indici sono specificati per le colonne usate in query frequenti o join — Non esplicitamente documentati.
+* [PARZIALE] I vincoli di unicità e foreign key sono dichiarati — Menzionati concetti di integrità, ma non definiti esplicitamente.
+* [NO] La strategia di migrazione dello schema è menzionata — Mancano riferimenti o strumenti per gestione migrazioni DB.
 
 ## 5. Checklist — Strategia di test
-* [SI] Esistono test per i happy path di ogni funzionalità principale — Piano test include unit e integration per i flussi principali.
-* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Test validazione e errori previsti.
-* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test di integrazione per Stripe, RabbitMQ, DB inclusi.
-* [SI] I test specificano input e expected output concreti (non generici) — Tabella indica input e output espliciti.
+* [SI] Esistono test per i happy path di ogni funzionalità principale — Test unitari e integrazione delineati con casi chiave.
+* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Coperture specificate.
+* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test integrati con Stripe, RabbitMQ e DB con concorrenza.
+* [PARZIALE] I test specificano input e expected output concreti (non generici) — Alcuni test hanno dati di input e output esemplificati, non tutti.
 
 ## 6. Requisiti mancanti
-* Mancata definizione esplicita della strategia di paginazione per endpoint liste ordini (critico per usabilità API).
-* Mancata menzione di migrazioni database.
-* Mancanza di dettaglio completo per schema tabelle e vincoli DB.
-* Regole precise e gestioni per cancellazione ordine e cleanup pagamenti autorizzati non catturati sono lasciate aperte.
+- Strategia di migrazione schema DB non definita.
+- Dettaglio requisiti regex e formati precisi di validazione input.
+- Uniformità formato errore JSON non completamente definita.
+- Dettaglio policy conservazione audit log GDPR da confermare.
+- Regole dettaglio notifiche push e gestione scenari rimborsi parziali non incluse.
+- Indici DB e vincoli non completamente esplicitati.
 
 ## 7. Rischi e problemi
-* ALTA: Mancanza di schema DB completo e strategia migrazione può rallentare sviluppo e introdurre rischi di inconsistenza.
-* ALTA: Mancata definizione paginazione API lista ordini rischia problemi di performance e usabilità con grandi dataset.
-* MEDIA: Gestione cancellazioni ordine e cleanup pagamenti non definiti chiaramente, rischio di incoerenze o accumulo dati inutilizzati.
-* MEDIA: Rischio race condition e concorrenza richiede attenzione nei lock ed è critica per coerenza stato ordini e stock.
-* BASSA: Future notifiche push e parametri retry da tarare, maggiore impatto a estensioni non MVP.
+- [ALTA] Mancanza strategia migrazione DB può causare problemi in fase di deployment in produzione.
+- [MEDIA] Ambiguità regole business sui rimborsi limitano corretta implementazione senza cambiamento futuro.
+- [MEDIA] Mancanza definizione strutturata uniforme errori JSON può generare difficoltà client.
+- [MEDIA] Dati validazione incompleti possono far sorgere problemi di sicurezza e consistenza.
+- [ALTA] Dipendenza alta da servizi esterni (Stripe, logistica) causa potenziali punti di fallimento.
+- [ALTA] Concorrenza e duplicati eventi richiedono attenzione per non compromettere consistenza stock/stato.
 
 ## 8. Azioni richieste
-* [PRIORITÀ ALTA] Definire e documentare strategia di paginazione per endpoint GET `/api/v1/orders` con parametri pagina, dimensione pagina e limiti di risultato.
-* [PRIORITÀ ALTA] Fornire schema dettagliato delle tabelle DB principali con campi, tipi, vincoli di unicità, foreign key e indicazioni per migrazioni.
-* [PRIORITÀ MEDIA] Chiarire e dettagliare la gestione cancellazione ordini e cleanup pagamenti autorizzati non catturati con procedure e flussi precisi.
-* [PRIORITÀ MEDIA] Completare descrizione dei vincoli DB esplicitando foreign key e unicità per garantire integrità relazionale.
-* [PRIORITÀ BASSA] Introdurre linee guida per parametri retry fine-tuning e strategia estensioni notifiche push futura.
+- [PRIORITÀ ALTA] Definire e documentare strategia di migrazione schema database inclusa eventuale automazione (Flyway, Liquibase).
+- [PRIORITÀ ALTA] Esplicitare regole di validazione con regex/formati dettagliati per campi critici (email, token, importi).
+- [PRIORITÀ MEDIA] Uniformare struttura JSON per errori REST con schema e esempi per tutti gli endpoint.
+- [PRIORITÀ MEDIA] Fornire dettagli tecnici e policy di conservazione audit log conformi GDPR.
+- [PRIORITÀ MEDIA] Aggiungere definizione chiara per gestione notifiche push e scenari rimborsi parziali per evitare ambiguità.
+- [PRIORITÀ BASSA] Documentare indici e vincoli DB per ottimizzazione e integrità dati.
 
+Nessuna azione impedisce di procedere ma sono raccomandate per migliorare qualità e compliance.

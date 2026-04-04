@@ -1,340 +1,246 @@
-```markdown
 MODULE: BACKEND VERSION: 1
 
 ## 1. Obiettivo backend
-
-Progettare e implementare un microservizio backend di tipo worker per la gestione ordini e-commerce con i seguenti obiettivi:
-- Orchestrare flusso ordine end-to-end: creazione, validazione, pagamento, stock, spedizione.
-- Garantire idempotenza, resilienza, compliance GDPR e PCI-DSS, logging audit immutabile.
-- Esporre API REST sicure per clienti e backoffice con controllo accessi e gestione ruoli.
-- Integrare con servizi esterni Stripe (pagamenti), Logistica, SendGrid (email).
-- Gestire aggiornamenti asincroni stato ordine da RabbitMQ con deduplicazione e ordering.
-- Mantenere performance elevate e transazioni ACID sul database PostgreSQL.
+Realizzare un microservizio worker per la gestione ordini e-commerce che garantisca un workflow end-to-end completo: dalla creazione dell'ordine, validazione, gestione magazzino, processo di pagamento con Stripe, conferma ordine, integrazione spedizioni e gestione rimborsi. Il sistema deve essere robusto, sicuro, scalabile e conforme a GDPR, con comunicazioni sincrone via REST API e asincrone tramite RabbitMQ.
 
 ## 2. Assunzioni tecniche
-
-- Linguaggio e framework: Java con Spring Boot / Spring Data JPA.
-- Database relazionale PostgreSQL con transazioni ACID.
-- Architettura microservizio event-driven layered.
-- Messaggistica RabbitMQ per eventi asincroni.
-- Integrazioni Stripe, Logistics, SendGrid tramite client SDK e REST.
-- Autenticazione JWT Bearer Token per API REST.
-- Idempotenza implementata con chiavi univoche (es. Idempotency-Key header).
-- Logging strutturato JSON e audit log append-only immutabile.
-- Retry automatici con backoff esponenziale e circuit breaker.
-- Monitoraggio latenza API < 200 ms 95° percentile.
+- Backend sviluppato in Java usando un’architettura a microservizi.
+- Persistenza dati con PostgreSQL con transazioni ACID.
+- Comunicazioni esterne REST JSON con validazione JSON schema rigorosa.
+- Autenticazione OAuth2 Bearer JWT obbligatoria su tutte le API protette.
+- Messaging asincrono tramite RabbitMQ per eventi di stato ordine.
+- Implementazione di pattern repository per accesso dati.
+- Gestione idempotente e retry con backoff su chiamate esterne (Stripe, logistica, notifiche).
+- Logging centralizzato e audit log per compliance GDPR.
+- Locking pessimista per la gestione concorrenziale del magazzino.
 
 ## 3. Architettura backend
-
-- **API REST Layer:** Espone endpoint per ordini e backoffice, con sicurezza e validazione.
-- **Application Layer:** Orchestrazione business logic; gestione stati ordine e workflow.
-- **Integration Layer:** Client resiliente per Stripe (pagamenti), Logistica (spedizioni), SendGrid (email).
-- **Async Event Consumer:** Processa eventi RabbitMQ OrderStatusUpdated con ordering e deduplicazione.
-- **Persistence Layer:** PostgreSQL con schemi normalizzati per ordini, stock e audit log.
-
-Tutti i layer rispettano il principio di separazione delle responsabilità; le operazioni critiche sono transazionali e garantiscono idempotenza e consistenza.
+Microservizio strutturato secondo pattern layered con: 
+- API REST sincrone per interazioni esterne.
+- Business logic layer con orchestrazione workflow ordini.
+- Repository layer per accesso isolato a database PostgreSQL.
+- Consumer RabbitMQ per gestione eventi asincroni.
+- Client REST per integrazioni esterne Stripe, logistica e notifiche.
+- Sistema di logging e audit integrato.
+- Meccanismi di autenticazione e autorizzazione integrati all'API Gateway o middleware.
 
 ## 4. Moduli e responsabilità
-
-| Modulo                  | Responsabilità principale                                                  |
-|------------------------|---------------------------------------------------------------------------|
-| API REST Controller     | Espone endpoint API, autenticazione JWT, validazione input, autorizzazioni|
-| Order Service           | Gestione workflow ordine, stato, logica di business                       |
-| Payment Integration     | Invocazioni Stripe authorize e capture con retry e idempotenza            |
-| Shipping Integration    | Creazione spedizioni con servizio logistico, gestione tracking            |
-| Email Notification      | Invio email via SendGrid su eventi stato ordine                           |
-| Stock Management        | Controllo e aggiornamento stock magazzino con transazioni atomiche        |
-| Event Consumer          | Consumo eventi RabbitMQ, deduplicazione, ordering, aggiornamento stato    |
-| Persistence Repository  | Accesso dati su PostgreSQL via ORM, transazioni, locking                  |
-| Audit Log Service       | Registrazione log immutabili per tutte le transizioni e azioni critiche   |
-
+- Controller REST: espone endpoint per creazione, lettura, lista ordini e rimborso.
+- Service Layer: orchestrazione logica ordini, pagamenti, transizioni di stato.
+- Repository: gestione entità (Order, OrderItem, Payment, Inventory, Shipment, AuditLog, NotificationEvent).
+- Integration Clients: Stripe Gateway, Logistics Service, Notification Service.
+- RabbitMQ Consumer: ascolta eventi asincroni di stato e li gestisce garantendo idempotenza.
+- Security Module: verifica JWT, applica RBAC.
+- Error Handling Module: uniforma gestione errori e retry.
+  
 ## 5. API principali
 
-### 1. POST /api/orders - Creazione nuovo ordine
-
+### 5.1 POST /api/orders
 - Metodo: POST
 - Path: /api/orders
-- Headers:
-  - Authorization: Bearer <jwt-token>
-  - Content-Type: application/json
-  - Idempotency-Key: <string-univoco>
-- Request Body:
+- Request Schema:
 ```json
 {
-  "customerId": "uuid",
+  "customer": {
+    "id": "string (uuid)",
+    "name": "string",
+    "email": "string (email format)",
+    "phone": "string (optional)"
+  },
   "items": [
     {
-      "productId": "uuid",
-      "quantity": 2
+      "productId": "string (uuid)",
+      "quantity": "integer (positive)"
     }
   ],
-  "payment": {
-    "method": "card",
-    "paymentInfo": {
-      "token": "stripe_payment_token"
-    }
-  },
   "shippingAddress": {
-    "name": "Nome Cliente",
-    "addressLine1": "Via Esempio 123",
-    "city": "Milano",
-    "postalCode": "20100",
-    "country": "IT"
+    "street": "string",
+    "city": "string",
+    "postalCode": "string",
+    "country": "string (ISO 3166-1 alpha-2)"
+  },
+  "payment": {
+    "method": "string (stripe_card, stripe_wallet)",
+    "authorizationId": "string (optional)"
   }
 }
 ```
-- Response 201 Created:
+- Response Schema (201 Created):
 ```json
 {
-  "orderId": "uuid",
+  "orderId": "string (uuid)",
   "status": "VALIDATION_PENDING",
-  "createdAt": "ISO8601 timestamp",
-  "totalAmount": 123.45,
-  "message": "Ordine ricevuto e in elaborazione"
+  "createdAt": "ISO8601 timestamp"
 }
 ```
-- Errori:
-  - 400 Bad Request: Validazione input fallita.
-  - 401 Unauthorized: JWT mancante o non valido.
-  - 409 Conflict: Duplicato Idempotency-Key.
-  - 500 Internal Server Error.
+- Esempio Request:
+```json
+{
+  "customer": {"id": "uuid-1234", "name": "Mario Rossi", "email": "mario@esempio.com"},
+  "items": [{"productId": "uuid-prod-5678", "quantity": 2}],
+  "shippingAddress": {"street": "Via Roma 1", "city": "Milano", "postalCode": "20100", "country": "IT"},
+  "payment": {"method": "stripe_card"}
+}
+```
+- Gestione errori: 400, 401, 409, 500
 
----
-
-### 2. GET /api/orders/{orderId} - Dettaglio ordine cliente
-
+### 5.2 GET /api/orders/{orderId}
 - Metodo: GET
 - Path: /api/orders/{orderId}
-- Headers:
-  - Authorization: Bearer <jwt-token>
-- Response 200 OK:
+- Response Schema (200 OK):
 ```json
 {
-  "orderId": "uuid",
-  "customerId": "uuid",
-  "items": [
-    {
-      "productId": "uuid",
-      "quantity": 2,
-      "unitPrice": 50.00
-    }
-  ],
-  "status": "CONFIRMED",
-  "totalAmount": 100.00,
-  "paymentStatus": "CAPTURED",
-  "shippingStatus": "IN_TRANSIT",
-  "shippingTracking": {
-    "trackingId": "string",
-    "carrier": "CarrierName",
-    "estimatedDelivery": "ISO8601"
+  "orderId": "string",
+  "customer": {...},
+  "items": [...],
+  "shippingAddress": {...},
+  "payment": {
+    "status": "AUTHORIZED | CAPTURED | FAILED | PENDING",
+    "method": "string",
+    "authorizationId": "string"
   },
-  "createdAt": "ISO8601 timestamp",
-  "updatedAt": "ISO8601 timestamp"
+  "orderStatus": "...",
+  "tracking": {...},
+  "timestamps": {...}
 }
 ```
+- Esempio: Dettaglio ordine completo
 
----
-
-### 3. GET /api/backoffice/orders - Lista ordini backoffice
-
+### 5.3 GET /api/orders
 - Metodo: GET
-- Path: /api/backoffice/orders
-- Query params: page, size, status (opzionali)
-- Authorization: JWT con ruolo amministratore
-- Response 200 OK:
+- Path: /api/orders
+- Query Parameters: status, customerId, page, size
+- Response Schema (200 OK):
 ```json
 {
-  "orders": [
-    {
-      "orderId": "uuid",
-      "status": "SHIPPED",
-      "totalAmount": 123.45,
-      "createdAt": "ISO8601",
-      "customerId": "uuid"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "size": 20,
-    "totalPages": 10,
-    "totalElements": 200
-  }
+  "page": 1,
+  "size": 20,
+  "totalElements": 100,
+  "orders": [/* array di sintesi ordini */]
 }
 ```
 
----
-
-### 4. GET /api/backoffice/orders/{orderId} - Dettaglio ordine backoffice
-
-- Metodo: GET
-- Path: /api/backoffice/orders/{orderId}
-- Authorization: JWT con ruolo amministratore
-- Response simile al GET cliente ma comprensivo di dati amministrativi.
-
----
-
-### 5. POST /api/backoffice/orders/{orderId}/refund - Rimborso manuale
-
+### 5.4 POST /api/orders/{orderId}/refund
 - Metodo: POST
-- Path: /api/backoffice/orders/{orderId}/refund
-- Headers: Authorization JWT admin
-- Body:
+- Path: /api/orders/{orderId}/refund
+- Request: nessun body
+- Response Schema (200 OK):
 ```json
 {
-  "reason": "Motivo rimborso descrittivo"
+  "orderId": "string",
+  "refundStatus": "INITIATED | COMPLETED | FAILED"
 }
 ```
-- Response 200 OK:
-```json
-{
-  "orderId": "uuid",
-  "refundStatus": "PROCESSING",
-  "message": "Rimborso avviato"
-}
-```
-- Errori:
-  - 400 Bad Request: ordine non rimborsabile.
-  - 403 Forbidden: ruolo non autorizzato.
-  - 500 Internal Server Error.
+
+### 5.5 GET /api/health
+- Metodo: GET
+- Path: /api/health
+- Nessuna autenticazione richiesta
+- Response 200 OK con stato di salute del servizio
 
 ## 6. Business logic
-
-- Flusso ordine a stati finiti: VALIDATION_PENDING → PAYMENT_AUTHORIZED → PAYMENT_CAPTURED → CONFIRMED → SHIPPED → DELIVERED.
-- Idempotenza garantita su operazioni critiche tramite header `Idempotency-Key`.
-- Gestione pagamenti autorizzazione e capture con Stripe, retry con backoff esponenziale.
-- Scalatura e ripristino stock in transazioni ACID.
-- Creazione spedizioni con retry e idempotenza.
-- Invio email cliente in ogni cambio stato.
-- Consumo eventi RabbitMQ OrderStatusUpdated asincrono con deduplicazione e ordering garantito.
-- Rimborso manuale gestito da backoffice con rollback e aggiornamento stock.
-- Audit log immutabile per ogni azione di stato o mutazione dati.
+- Creazione ordine: validazione payload, verifica stock con locking pessimista, persistenza ordine.
+- Pagamento: autorizzazione e capture stripe asincroni, gestione stati pagamento.
+- Spedizione: integrazione asincrona logistica con retry e idempotenza.
+- Refund: gestione rimborso completo, aggiornamento stato ordine e ripristino stock.
+- Eventi RabbitMQ: aggiornamento stato ordine, notifiche, gestione idempotente ed ordinata.
+- Notifiche: invio email e push per ogni transizione di stato.
 
 ## 7. Persistenza e integrazioni
-
-- PostgreSQL con schema ordini, stock, audit log normalizzato.
-- Repository Java Spring Data JPA per ogni entità.
-- Transazioni DB per operazioni composte (es. pagamento + scalatura stock + audit).
-- Integrazione Stripe con client idempotente e retry automatico.
-- Integrazione Logistica per spedizioni idem.
-- Integrazione SendGrid per notifiche email con retry e gestione errori.
-- Event consumer per RabbitMQ con deduplicazione eventi tramite chiavi univoche e ordering.
+- Database PostgreSQL con schema relazionale normalizzato e supporto ad ACID.
+- Tabelle: Order, OrderItem, Payment, Inventory, Shipment, AuditLog, NotificationEvent.
+- Repositories Java per isolamento accesso dati, con transazioni gestite declarativamente.
+- Integrazione con Stripe (pagamenti), servizio logistica esterno, sistema notifiche email/push.
+- Messaging RabbitMQ per eventi ordine asincroni.
 
 ## 8. Autenticazione e autorizzazione
-
-- Tutti gli endpoint REST protetti da JWT Bearer Token.
-- Validazione firma, scadenza e ruoli via filter/interceptor.
-- Accesso cliente limitato ai propri ordini (verifica customerId).
-- Accesso backoffice riservato a utenti con ruolo "amministratore" tramite sistema identity esterno.
-- Nessun sistema di utenti interno al backend.
-- Controlli di autorizzazione implementati rigidi sui ruoli.
+- OAuth2 Bearer JWT obbligatorio su tutte le API protette.
+- JWT validato a gateway o middleware API.
+- RBAC definito:
+  - Client generici: creano ordini, leggono propri ordini.
+  - Operatori backoffice: listano ordini, processano rimborsi.
+- Input rigorosamente validati e sensitivi cifrati.
+- Health endpoint esposto senza auth per monitoraggio.
 
 ## 9. Gestione errori
-
-- Errori client: 400 con dettagli JSON su campi errati.
-- Errori autenticazione/authorization: 401/403 con messaggi chiari.
-- Idempotenza: richieste duplicate con stessa `Idempotency-Key` restituiscono successo con dati originari.
-- Errori integrazione esterne gestiti con retry e failure escalation a 500.
-- Event consumer ritenta eventi in caso di errori transitori.
-- Transazioni DB rollback completo per garantire consistenza.
-- Logging strutturato dettagliato per tracing e audit.
-- Timeout e rate limiting monitorati e gestiti per mantenere performance.
+- Standard HTTP status e response JSON uniforme:
+```json
+{
+  "errorCode": "string",
+  "message": "string",
+  "details": {}
+}
+```
+- Codici: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, CONFLICT, NOT_FOUND, EXTERNAL_SERVICE_ERROR, INTERNAL_ERROR.
+- Retry automatico con backoff per servizi esterni.
+- Logging con contesto per diagnosi e audit.
 
 ## 10. Strategia di test backend
 
-| Nome Test                                | Tipo          | Cosa verifica                                   | Input                                             | Output atteso                                      |
-|-----------------------------------------|---------------|------------------------------------------------|--------------------------------------------------|---------------------------------------------------|
-| OrderCreation_ValidInput                 | Unit          | Creazione ordine con input valido               | Request JSON corretto, JWT valido, Idempotency-Key | 201 Created + ordine creato con stato VALIDATION_PENDING |
-| OrderCreation_DuplicateIdempotencyKey   | Integration   | Idempotenza su richieste duplicate              | Due richieste identiche con stesso Idempotency-Key | Seconda risposta 409 Conflict o 200 con dati originali |
-| PaymentAuthorizationRetry                | Integration   | Retry autorizzazione pagamento Stripe           | Simulazione fallimento transitorio Stripe        | Successo dopo retry, stato ordine aggiornato       |
-| StockScaling_TransactionalConsistency   | Unit/Integration | Scalatura stock atomica a pagamento confermato | Input ordine + pagamento catturato                | Stock aggiornato, transazione committata           |
-| RefundManual_BackofficeAdmin             | Integration   | Rimborso manuale con controllo ruoli            | POST refund con token admin e ordine valido       | 200 OK, ordine REFUNDED, stock ripristinato        |
-| EventConsumer_Deduplication              | Unit          | Deduplicazione e ordering eventi RabbitMQ       | Eventi duplicati e fuori ordine                    | Evento processato solo una volta in ordine corretto |
-| AuthMiddleware_InvalidJWT                | Unit          | Blocco chiamata API con token JWT non valido    | Token scaduto o mancante                           | 401 Unauthorized                                    |
-| APIResponse_ErrorSchema                  | Unit          | Response error coerenti e dettagliate            | Request malformata                                 | 400 Bad Request con payload di errore dettagliato  |
+| Nome Test                        | Tipo       | Verifica                                     | Input                         | Output                        |
+|---------------------------------|------------|----------------------------------------------|-------------------------------|-------------------------------|
+| CreateOrder_ValidPayload         | Unit       | Validazione payload e chiamata a DB          | Payload ordine valido          | Stato VALIDATION_PENDING       |
+| CreateOrder_InsufficientStock    | Integration| Locking pessimista e gestione errore stock   | Ordine con quantità magazzino insuff. | Errore 409 CONFLICT          |
+| Payment_Authorization_Success    | Integration| Integrazione Stripe autorizzazione            | Dati pagamento validi          | Stato PAYMENT_PENDING          |
+| Shipping_Create_Success          | Integration| Chiamata asincrona al servizio logistica     | Ordine confermato              | Stato SHIPPING_CREATED         |
+| Refund_FullProcess_Complete      | E2E        | Processo completo rimborso e rollback stock   | Richiesta rimborso             | Stato REFUNDED                |
+| Auth_JWT_Validation              | Unit       | Verifica token JWT e RBAC                      | Richiesta con/ senza JWT       | Accesso consentito / negato    |
+| RabbitMQ_Event_Processing_Idempotent | Integration | Gestione eventi duplicati e fuori ordine      | Messaggi duplicati o ritardati | Stato consistente ordine      |
 
 ## 11. Rischi tecnici
-
-1. Definizione event format e ordering RabbitMQ non completamente stabilita.
-2. Rischio race condition su stato ordine e stock con concorrenza elevata.
-3. Parametrizzazione retry e backoff da calibrare accuratamente per resilienza senza sovraccarico.
-4. Gestione transazioni multi-step in presenza di errori (es: fallback capture, cancellazioni).
-5. Implementazione compliance GDPR e PCI-DSS complessa.
-6. Assicurare immutabilità e retention log audit persistenti e sicuri.
-7. Integrazione role management backoffice da identity esterno, necessità di politiche least privilege rigorose.
+- Overselling per lock contention su magazzino o errata gestione locking.
+- Messaggi RabbitMQ duplicati o fuori ordine causando inconsistenze.
+- Dipendenza da servizi esterni (Stripe, logistica) con possibili outage prolungati.
+- Incompleta definizione casi rimborsi parziali e sistema notifiche push.
+- Compliance GDPR su dati sensibili e audit log.
+- Sicurezza e validazione input per prevenire attacchi injection.
 
 ## 12. Struttura file proposta
 
 ```
 /src
-  /main
-    /java
-      /com/company/order
-        Application.java               # Classe main Spring Boot
-        /api
-          OrderController.java        # Espone API ordini cliente
-          BackofficeController.java   # API backoffice con controlli ruolo
-          AuthFilter.java             # Filtra JWT, verifica ruoli
-        /service
-          OrderService.java           # Business logic flusso ordine
-          PaymentService.java         # Wrapper integrazione Stripe
-          ShippingService.java        # Client Logistica spedizioni
-          EmailNotificationService.java # Invio email SendGrid
-          StockService.java           # Gestione stock magazzino
-          RefundService.java          # Rimborso manuale backoffice
-          EventConsumerService.java   # Consumatore eventi RabbitMQ
-          AuditLogService.java        # Gestione audit log immutabili
-        /repository
-          OrderRepository.java        # Repository Spring Data JPA Orders
-          StockRepository.java        # Repository stock magazzino
-          AuditLogRepository.java     # Repository audit log
-        /model
-          Order.java                 # Modello dati ordine
-          OrderItem.java
-          Stock.java
-          AuditLog.java
-          PaymentInfo.java
-          ShippingInfo.java
-        /config
-          AppConfig.java             # Configurazione retry, DB, JWT, RabbitMQ
-        /exception
-          ApiExceptionHandler.java   # Gestione centralizzata errori API
-          CustomExceptions.java      # Definizione eccezioni custom
-    /resources
-      application.yml                # Configurazioni app (DB, servizi esterni)
-      schema.sql                    # Script iniziale DB
-      /migrations
-        V1__init_schema.sql
-  /test
-    /java/com/company/order
-      OrderServiceTest.java         # Unit test business logic ordine
-      PaymentServiceTest.java
-      StockServiceTest.java
-      RefundServiceTest.java
-      EventConsumerTest.java
-      AuthFilterTest.java
-      ApiExceptionHandlerTest.java
+├── /controller
+│     └── OrderController.java          # Espone REST API ordini
+├── /service
+│     ├── OrderService.java             # Logica business ordine
+│     ├── PaymentService.java           # Gestione pagamenti Stripe
+│     ├── ShippingService.java          # Integrazione logistica
+│     └── RefundService.java            # Gestione rimborsi
+├── /repository
+│     ├── OrderRepository.java          # CRUD ordine
+│     ├── PaymentRepository.java        # CRUD pagamento
+│     ├── InventoryRepository.java      # Gestione magazzino e locking
+│     ├── ShipmentRepository.java       # Tracking spedizioni
+│     ├── AuditLogRepository.java       # Log audit compliance
+│     └── NotificationEventRepository.java # Log notifiche inviate
+├── /integration
+│     ├── StripeClient.java             # Client REST Stripe
+│     ├── LogisticsClient.java          # Client REST logistica
+│     └── NotificationClient.java       # Client notifiche email/push
+├── /consumer
+│     └── OrderEventConsumer.java       # Consumer RabbitMQ eventi ordine
+├── /security
+│     ├── JwtFilter.java                # Filtro validazione JWT
+│     └── RbacAuthorization.java       # Logica RBAC
+├── /exception
+│     └── ApiExceptionHandler.java      # Gestione centralizzata errori
+└── /config
+      └── AppConfig.java                # Config generali e DI
 ```
 
 ## 13. Piano di implementazione
-
-1. Configurare ambiente di sviluppo: Java, Spring Boot, PostgreSQL, RabbitMQ.
-2. Definire schema DB e implementare repository con Spring Data JPA.
-3. Realizzare modulo API REST con autenticazione JWT e validazione input.
-4. Implementare business logic ordinaria: creazione ordine, stato workflow, persistente su DB.
-5. Integrare Stripe Payment: autorizzazione e capture con retry e idempotenza.
-6. Implementare stock management transazionale.
-7. Integrare Logistica spedizioni con client idempotente.
-8. Realizzare servizio email SendGrid con retry.
-9. Implementare consumer RabbitMQ per aggiornamenti asincroni.
-10. Sviluppare moduli backoffice per rimborso manuale con controlli ruolo.
-11. Aggiungere audit log immutabile e logging strutturato.
-12. Implementare gestione errori centralizzata e messaggi coerenti.
-13. Stesura test unitari e integration test su ogni modulo critico.
-14. Deployment e test di carico per garantire performance target (<200ms 95° percentile).
-15. Finalizzare documentazione e preparare ambiente monitoraggio e alerting.
+1. Setup progetto e infrastruttura (DB, RabbitMQ, config sicurezza).
+2. Implementazione modello dati e repository con transazioni e locking.
+3. Sviluppo API REST di base (creazione e dettaglio ordine).
+4. Integrazione con Stripe (authorization, capture) con retry e idempotenza.
+5. Implementazione consumer RabbitMQ per gestione eventi.
+6. Sviluppo processi spedizione e notifiche asincrone.
+7. Implementazione endpoint rimborso e logica cancellazione stock.
+8. Completamento sicurezza con JWT e RBAC.
+9. Scrittura test unitari, di integrazione ed E2E.
+10. Deploy ambiente test, esecuzione test e fix.
+11. Documentazione tecnica e preparazione per QA.
 
 ---
 
-La presente proposta backend unifica le specifiche funzionali, architetturali, di sicurezza, integrazione e performance nel rispetto dei requisiti PM. Il modello è progettato per garantire robustezza, scalabilità, manutenibilità e compliance normativa.
-
-```
+Documento backend finale conforme ai requisiti tecnici, architetturali e di sicurezza, pronto per il ciclo di QA e produzione.
