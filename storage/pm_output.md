@@ -1,89 +1,63 @@
+```markdown
 MODULE: PM VERSION: 1
 
 ## 1. Obiettivo
-Sviluppare un microservizio backend per la gestione degli ordini e-commerce con integrazione a servizi esterni (gateway pagamento Stripe, servizio logistica, sistema notifiche SendGrid), garantendo un workflow completo dalla ricezione dell’ordine fino alla spedizione, gestione magazzino e supporto backoffice operatori.
+Sviluppare un sistema backend per la gestione degli ordini e-commerce, integrato con servizi esterni, per automatizzare il flusso di gestione ordini e migliorare l'efficienza operativa.
 
 ## 2. Contesto e vincoli
-- Architettura microservizio autonomo, deployabile indipendentemente in ambiente container.
-- Persistenza dati su PostgreSQL con transazioni ACID per coerenza e atomicità nelle operazioni critiche.
-- Comunicazione asincrona con altri microservizi tramite RabbitMQ per eventi di stato ordine.
-- Integrazione con gateway pagamento Stripe (authorization e capture).
-- Resilienza e affidabilità garantita tramite retry automatici su errori temporanei e operazioni idempotenti.
-- Sicurezza: API protette con autenticazione e autorizzazione tramite JWT, validazione e sanificazione input.
-- Logging centralizzato, audit log delle modifiche di stato ordine e operazioni critiche.
-- Stack tecnologico: Java, REST API, Bear, PostgreSQL, JWT.
+- Il sistema sarà un microservizio autonomo, che può essere deployato indipendentemente.
+- Persistenza su PostgreSQL con transazioni ACID per garantire coerenza e rollback delle operazioni critiche.
+- Comunicazione tra microservizi mediante eventi asincroni gestiti da RabbitMQ.
+- Autenticazione e autorizzazione tramite JWT per la sicurezza delle API.
+- L'unico metodo di pagamento gestito sarà Stripe, con flussi di authorization e capture.
+- Logging e audit dettagliato di tutte le transazioni order state.
 
 ## 3. Assunzioni
-- Payload ordine contiene dati completi: cliente, prodotti, quantità, indirizzo spedizione, dati pagamento.
-- Supporto flusso completo di pagamento separato authorization + capture.
-- Rimborsi manuali tramite API solo per rimborso totale; regole di business non gestite.
-- Gestione magazzino con locking e controllo preventivo per evitare overselling.
-- Sistema notifiche push generico configurabile (oltre a SendGrid per email), dettagli da definire.
-- Sistema autenticazione utenti esterno integrato via JWT, non sviluppato internamente.
-- Conservazione audit log conforme a policy GDPR con dettagli su transizioni stato, utenti, timestamp.
+- Verranno seguite le opzioni di default e le best practice per tutte le aree non specificate.
+- Le notifiche push useranno un provider ancora da definire.
+- I parametri specifici per l'integrazione con Stripe seguiranno la documentazione standard di Stripe.
 
 ## 4. Scope MVP
-- Implementazione API REST per ricezione ordini con validazione dati.
-- Integrazione con Stripe per autorizzazione e cattura pagamenti, gestione stati pagamento.
-- Workflow ordine con stati e transizioni: validazione → pagamento → conferma ordine → creazione spedizione → completamento spedizione.
-- Gestione asincrona aggiornamenti stato ordine tramite consumer RabbitMQ.
-- Integrazione con servizio esterno logistica per creazione spedizioni e tracking con retry e idempotenza.
-- Invio notifiche via email (SendGrid) e push configurabili su ogni variazione stato ordine.
-- API backoffice operatori autenticata JWT per visualizzazione lista ordini, dettaglio ordine e rimborso manuale.
-- Gestione magazzino con scalatura stock a pagamento confermato e ripristino su cancellazione o rimborso.
-- Logging centralizzato e audit log completo per cambi stato ordine.
+- Creazione di endpoint REST per la ricezione di ordini con tutte le informazioni necessarie.
+- Integrazione con Stripe per la gestione dei pagamenti.
+- Implementazione del workflow di elaborazione ordini: validazione, pagamento, conferma, spedizione.
+- Uso di RabbitMQ per eventi di aggiornamento stato ordine.
+- Integrazione con il servizio esterno di logistica per tracking spedizioni.
+- Invio di notifiche tramite email e push tramite SendGrid.
+- Fornitura di API di backoffice per gestire ordini e rimborsi.
+- Gestione della sincronizzazione del magazzino.
 
 ## 5. Out of scope
-- Frontend o interfacce utente grafiche.
-- Sviluppo sistema di autenticazione utenti (si presume sistema esterno).
-- Supporto a gateway di pagamento diversi da Stripe.
-- Supporto multicanale o multistore.
-- Sviluppo del servizio di logistica (solo integrazione).
-- Supporto multi-valuta o multi-lingua.
-- Reportistica avanzata o BI.
-- Gestione manuale code RabbitMQ (solo consumer automatico).
-- Gestione regole avanzate per rimborsi (partiali, tempistiche).
+- Nessun front-end per i clienti finali è incluso.
+- Nessuna integrazione con metodi di pagamento diversi da Stripe.
+- Non è richiesta la gestione di promozioni o scontistiche.
 
 ## 6. Task tecnici ordinati
-1. Progettazione schema dati e tabelle PostgreSQL con transazioni ACID.
-2. Sviluppo API REST per ricezione ordini (validazione payload).
-3. Implementazione integrazione Stripe: authorization, capture, gestione stati, retry e idempotenza.
-4. Definizione e implementazione workflow ordine con stati e transizioni.
-5. Realizzazione audit log per tracciamento stato ordine e operazioni critiche.
-6. Sviluppo consumer RabbitMQ per aggiornamenti asincroni stato ordine con gestione concorrenza e duplicati.
-7. Integrazione con servizio esterno logistica per creazione spedizioni e tracking con meccanismi retry e idempotenza.
-8. Implementazione notifica email con SendGrid e sistema push generico configurabile.
-9. Creazione API backoffice protette JWT per gestione ordini (lista, dettaglio, rimborso manuale).
-10. Realizzazione gestione magazzino con scalatura e ripristino stock, garantendo consistenza con locking.
-11. Implementazione meccanismi di sicurezza: JWT, validazione e sanificazione input, crittografia dati sensibili.
-12. Configurazione logging centralizzato, monitoraggio metriche e health check.
-13. Testing funzionale, di carico, resilienza (retry, idempotenza) e sicurezza.
+1. Progettazione e creazione degli endpoint REST per la ricezione ordini.
+2. Implementazione dell'integrazione con Stripe per authorization e capture.
+3. Sviluppo del workflow di elaborazione ordine, comprese validazioni e compensazioni di errori.
+4. Configurazione di RabbitMQ per gestione eventi di stato.
+5. Sviluppo dell'integrazione con il servizio logistico esterno per spedizioni.
+6. Implementazione dell'invio di notifiche tramite SendGrid.
+7. Sviluppo delle API di backoffice per la gestione ordini.
+8. Implementazione del sistema di gestione magazzino integrato.
+9. Setup della sicurezza delle API con JWT.
+10. Implementazione di logging e audit log per le transizioni di stato ordine.
 
 ## 7. Acceptance criteria
-- API REST ordini accettano payload validi e rigettano payload malformati.
-- Integrazione Stripe funziona correttamente per authorization e capture con gestione corretta degli stati.
-- Workflow ordini gestisce correttamente tutte le transizioni di stato e produce eventi asincroni.
-- Consumer RabbitMQ aggiorna lo stato ordini coerentemente e non si generano duplicati o out-of-order non gestiti.
-- Integrazione con logistica crea spedizioni senza duplicati e recupera tracking correttamente; gestisce errori transitori con retry.
-- Notifiche email e push inviate a ogni cambio stato ordine con contenuti configurabili.
-- API backoffice rispondono correttamente con autenticazione JWT, supportano filtraggio/paginazione e rimborso totale.
-- Gestione magazzino aggiorna stock in modo atomico e coerente in presenza di ordini concorrenti.
-- Logging e audit log tracciano tutte le operazioni critiche e transizioni con dati completi e sicurezza.
-- Performance API entro 200ms per richieste standard; sistema resiste a carico di picco ordini.
-- Retry automatici gestiti con backoff per servizi esterni.
-- Tutte le API e servizi applicano validazione input e sanificazione per evitare vulnerabilità.
+- Gli endpoint REST devono ricevere ordini con tutte le informazioni necessarie per l'elaborazione.
+- Stripe deve essere correttamente integrato e gestire correttamente i pagamenti, incluse situazioni di retry.
+- Il workflow di elaborazione ordine deve seguire la sequenza definita con meccanismi di compensazione operativi.
+- RabbitMQ deve gestire efficacemente gli eventi asincroni di aggiornamento stato ordine.
+- L'integrazione logistica deve fornire correttamente il tracking delle spedizioni.
+- Notifiche devono essere inviate a ogni cambio di stato ordine.
+- Le API di backoffice devono permettere la gestione degli ordini e dei rimborsi.
+- Il sistema di gestione magazzino deve scalare e ripristinare stock correttamente.
 
 ## 8. Rischi e punti aperti
-- Ambiguità nel dettaglio dati ordine da ricevere via API (es. pagamenti parziali o multipli).
-- Gestione dettagliata dei rimborsi manuali (parziale, totale, tempistiche) da definire.
-- Dettagli sistema notifiche push e canali supportati ancora da chiarire.
-- Possibili scenari di concorrenza su magazzino in ordini simultanei con stock limitato.
-- Gestione messaggi duplicati o fuori ordine da RabbitMQ.
-- Impatto e gestione degradata se servizio logistica esterno è indisponibile a lungo.
-- Integrazione con sistema autenticazione utenti esterno deve essere confermata.
-- Nessun supporto multi-tenant/multi-store previsto al momento, ma possibile evoluzione futura.
-- Policy di conservazione audit log perfettamente allineate con GDPR da verificare.
-
----
-
-Documento elaborato con attenzione a distinguere chiaramente assunzioni da vincoli tecnici e funzionali confermati. Non sono stati aggiunti requisiti esterni rispetto a quelli forniti.
+- La gestione delle notifiche push è ambigua, poiché il provider non è stato ancora deciso.
+- Dettagli sui parametri di authorization con Stripe necessitano di ulteriori chiarimenti.
+- Come gestire ordini ricevuti senza alcune informazioni essenziali non è definito.
+- Potenziali rischi di fallimento in transazioni critiche e necessità di retry.
+- Gestione delle restituzioni di fondi nel caso di problemi con il sistema logistico. 
+```

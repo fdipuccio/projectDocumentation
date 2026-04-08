@@ -1,60 +1,54 @@
-MODULE: QA
-VERSION: 1
-FINAL_STATUS: APPROVED_WITH_CHANGES
+MODULE: QA  
+VERSION: 1  
+FINAL_STATUS: REJECTED  
 
 ## 1. Checklist — Copertura requisiti
-* [SI] API REST ordini accettano payload validi e rigettano payload malformati — Validazione input definita dettagliatamente con codici HTTP 400 per errori.
-* [SI] Integrazione Stripe funziona correttamente per authorization e capture con gestione corretta degli stati — Flusso payment authorization + capture con retry e idempotenza descritti.
-* [SI] Workflow ordini gestisce correttamente tutte le transizioni di stato e produce eventi asincroni — Workflow step-by-step con eventi RabbitMQ è esplicitamente descritto.
-* [SI] Consumer RabbitMQ aggiorna lo stato ordini coerentemente e non si generano duplicati o out-of-order non gestiti — Consumer idempotente con gestioni duplicati e sequenza implementate.
-* [SI] Integrazione con logistica crea spedizioni senza duplicati e recupera tracking correttamente; gestisce errori transitori con retry — Shipping module con retry e idempotenza per chiamate esterne indicati.
-* [SI] Notifiche email e push inviate a ogni cambio stato ordine con contenuti configurabili — Notification module contempla invio email con SendGrid e notifiche push configurabili.
-* [SI] API backoffice rispondono correttamente con autenticazione JWT, supportano filtraggio/paginazione e rimborso totale — API protette JWT, filtri, paginazione e rimborso totale manuale descritti.
-* [SI] Gestione magazzino aggiorna stock in modo atomico e coerente in presenza di ordini concorrenti — Locking pessimista e transazioni ACID definite per gestione stock.
-* [SI] Logging e audit log tracciano tutte le operazioni critiche e transizioni con dati completi e sicurezza — Audit log GDPR compliant e centralizzato descritto.
-* [PARZIALE] Performance API entro 200ms per richieste standard; sistema resiste a carico di picco ordini — Non sono presenti metriche o test performance documentati, benché tuning e test siano nel piano.
-* [SI] Retry automatici gestiti con backoff per servizi esterni — Retry con exponential backoff e circuit breaker menzionati.
-* [SI] Tutte le API e servizi applicano validazione input e sanificazione per evitare vulnerabilità — Sanificazione, validazione e sicurezza dettagliatamente previsti.
+* [PARZIALE] Gli endpoint REST devono ricevere ordini con tutte le informazioni necessarie per l'elaborazione — La proposta menziona l'elaborazione, ma non dettaglia esplicitamente gli endpoint REST.
+* [SI] Stripe deve essere correttamente integrato e gestire correttamente i pagamenti, incluse situazioni di retry — L'integrazione con Stripe è descritta con handling di retry.
+* [SI] Il workflow di elaborazione ordine deve seguire la sequenza definita con meccanismi di compensazione operativi — Meccanismi di idempotenza e handling degli errori sono specificati.
+* [SI] RabbitMQ deve gestire efficacemente gli eventi asincroni di aggiornamento stato ordine — L'uso di RabbitMQ è centrale nella proposta.
+* [SI] L'integrazione logistica deve fornire correttamente il tracking delle spedizioni — Descritta nel modulo Integration Layer.
+* [PARZIALE] Notifiche devono essere inviate a ogni cambio di stato ordine — Menzionato, ma non dettagliato su tutti gli stati.
+* [NO] Le API di backoffice devono permettere la gestione degli ordini e dei rimborsi — Non sono descritte API di backoffice.
+* [NO] Il sistema di gestione magazzino deve scalare e ripristinare stock correttamente — Nessuna menzione specifica nella proposta.
 
 ## 2. Checklist — Contratti API
-* [SI] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Tutti gli endpoint principali illustrati con JSON schema e risposte.
-* [SI] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Campi descritti in dettaglio nei payload.
-* [SI] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Standard error response JSON con campo error usato coerentemente.
-* [SI] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Dettaglio codici HTTP per successo e errori fornito.
-* [SI] La strategia di paginazione è definita per le liste (se applicabile) — Paginazione esplicitata per GET /api/orders con parametri e risposta.
+* [NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Non dettagliato nella proposta.
+* [NO] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Nessuna specifica dettagliata fornita.
+* [NO] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Non descritto.
+* [NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Non specificato.
+* [NO] La strategia di paginazione è definita per le liste (se applicabile) — Non menzionata.
 
 ## 3. Checklist — Business logic e scenari limite
-* [SI] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Workflow stati ordine e flussi di pagamento e spedizione sono definiti in step.
-* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Locking pessimistico e controllo duplicati con idempotenza sono implementati.
-* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Retry con backoff ed idempotenza, circuit breaker esplicitati per Stripe e logistica.
-* [PARZIALE] Le regole di business critiche sono esplicite e non ambigue — Rimangono ambiguità su pagamenti parziali e dettagli rimborso che non sono completamenti risolti.
+* [NO] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Manca descrizione passo-passo dei flussi.
+* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Sono considerati problemi di concorrenza.
+* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Riprendi con backoff esponenziale e DLQ menzionati.
+* [NO] Le regole di business critiche sono esplicite e non ambigue — Mancano dettagli espliciti sulle regole di business.
 
 ## 4. Checklist — Persistenza e schema dati
-* [SI] Le tabelle/collezioni principali sono definite con i campi e i tipi — Entity principali e modelli con campi sono elencati (Ordine, Pagamento, etc.).
-* [PARZIALE] Gli indici sono specificati per le colonne usate in query frequenti o join — Mancano dettagli specifici sugli indici.
-* [SI] I vincoli di unicità e foreign key sono dichiarati — Vincoli di chiave esterna e unicità menzionati nelle entità.
-* [PARZIALE] La strategia di migrazione dello schema è menzionata — Non c'è menzione esplicita di versioning o migrazioni schema.
+* [NO] Le tabelle/collezioni principali sono definite con i campi e i tipi — Non dettagliate.
+* [NO] Gli indici sono specificati per le colonne usate in query frequenti o join — Non menzionati.
+* [NO] I vincoli di unicità e foreign key sono dichiarati — Non specificati.
+* [NO] La strategia di migrazione dello schema è menzionata — Non descritta.
 
 ## 5. Checklist — Strategia di test
-* [SI] Esistono test per i happy path di ogni funzionalità principale — Test unitari e integrazione con casi positivi elencati.
-* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Test coprono errori validazione e autorizzazioni.
-* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Test integrati per DB, Stripe e altro presenti.
-* [SI] I test specificano input e expected output concreti (non generici) — Test mostrano input specifico e output atteso chiaramente.
+* [SI] Esistono test per i happy path di ogni funzionalità principale — Test descritti per validation e integrazione.
+* [PARZIALE] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Non completamente dettagliato.
+* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Descritti i test di integrazione.
+* [PARZIALE] I test specificano input e expected output concreti (non generici) — Non completamente esplicitati.
 
 ## 6. Requisiti mancanti
-- Performance API entro 200ms non supportato da metrature/test espliciti.
-- Ambiguità su pagamenti parziali e regole rimborso non completamente risolta.
-- Dettaglio indice DB e migrazioni schema non completamente esplicitati.
+- Gestione delle API di backoffice per ordini e rimborsi.
+- Dettagli sul sistema di gestione magazzino.
 
 ## 7. Rischi e problemi
-- [ALTA] Ambiguità requisiti su pagamenti parziali e rimborso, potenziale impatto su flusso ordine e accounting.
-- [MEDIA] Mancanza di dettaglio su migrazione schema potrebbe creare problemi in evoluzioni.
-- [MEDIA] Indici DB non documentati esplicitamente potrebbero degradare performance.
-- [BASSA] Mancanza di test performance espliciti limita validazione SLA.
+- **ALTA**: Mancanza di dettagli sugli endpoint API (area funzionale).
+- **MEDIA**: Integrazione parziale dei tracking e business logic esplicite (area funzionale).
 
 ## 8. Azioni richieste
-- [PRIORITÀ ALTA] Definire e documentare gestione completa dei pagamenti parziali e regole rimborso manuale per eliminare ambiguità.
-- [PRIORITÀ MEDIA] Documentare dettagli implementativi degli indici DB per query performance e migrazioni schema versionate.
-- [PRIORITÀ MEDIA] Introdurre test di performance specifici misurando tempi risposta e capacità carico API ordini.
+* [PRIORITÀ ALTA] Definire esplicitamente gli endpoint API con dettagli su HTTP method, schema delle richieste e risposte, e esempio concreto per ognuno.
+* [PRIORITÀ ALTA] Aggiungere specifiche dettagliate su gestione magazzino e funzionalità di API di backoffice.
+* [PRIORITÀ MEDIA] Specificare le strategie di paginazione e formato errori uniformi per le API.
+* [PRIORITÀ MEDIA] Presentare descrizioni passo-passo dei flussi principali.
+* [PRIORITÀ MEDIA] Fornire schema delle tabelle del database con specifica di tipi, indici e vincoli.
 
-Nessuna azione impedisce la partenza del progetto ma sono richieste per garantire la piena conformità e robustezza.
