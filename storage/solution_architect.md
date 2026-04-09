@@ -36,6 +36,4 @@ Il pattern architetturale scelto è l'**Event-Driven Microservices**, motivato d
 - **API Developer**: Attenersi a schemi JSON definiti. Garantire conformità a JWT. Implementare meccanismi di retry adeguati.
 - **Integration Developer**: Configurare RabbitMQ per gestire efficacemente le code di stato degli ordini. Assicurarsi che interazioni Stripe siano idempotenti.
 - **Security and Compliance**: Verificare che tutte le chiamate API seguano politiche di sicurezza e che sia attivo il monitoraggio per compliance.
-
----
 ```

@@ -1,54 +1,59 @@
-```markdown
 MODULE: PM VERSION: 1
 
 ## 1. Obiettivo
-Creare un sistema backend per la gestione efficiente e scalabile degli ordini e-commerce, con funzionalità di integrazione a servizi esterni.
+Sviluppare un sistema backend per la gestione degli ordini di e-commerce con integrazione a servizi esterni, con funzionalità che coprono ricezione degli ordini, gestione dei pagamenti, aggiornamento dello stato degli ordini, gestione logistica, notifiche agli utenti e funzioni di backoffice per operatori.
 
 ## 2. Contesto e vincoli
-Il sistema dovrà essere composto da microservizi autonomi con la capacità di deployment indipendente. Utilizzerà PostgreSQL per la persistenza dei dati, supportando transazioni ACID per garantire l'integrità. La comunicazione con servizi esterni, come sistemi di pagamento e logistica, dovrà essere resiliente, con retry automatici in caso di fallimenti transitori. JWT verrà utilizzato per autenticazione, garantendo la sicurezza delle API. L'idempotenza è essenziale per prevenire duplicati in operazioni critiche.
+- Vincoli tecnici: L'intero sistema deve essere sviluppato utilizzando Java, PostgreSQL, RabbitMQ e JWT per autenticazione e autorizzazione. Implementazione Microservice Cropieza packaging. Vincolo di utilizzare esclusivamente Stripe per i pagamenti e SendGrid per le notifiche.
+- Vincoli di business: Integrazione obbligatoria con Stripe e SendGrid.
+- Comunicazione asincrona con alti microservizi tramite RabbitMQ.
 
 ## 3. Assunzioni
-- L'integrazione con Stripe supporterà le principali carte di credito.
-- La conferma della spedizione verrà determinata da un evento ricevuto dal servizio di logistica.
-- Le notifiche push non sono richieste; si implementeranno solo le email tramite SendGrid.
-- Il sistema è costruito utilizzando Java per le API REST e si appoggerà ad Architetture Bear per il design dei microservizi.
+- Il sistema di pagamento utilizzerà chiavi API standard di Stripe per l'autenticazione.
+- Si ipotizza l'uso di API REST standard per la comunicazione con i servizi di logistica.
+- Le notifiche al cliente avverranno almeno tramite email e push.
+- Non è richiesta un'interfaccia utente per clienti o operatori all'interno del sistema backend.
 
 ## 4. Scope MVP
-- Implementare API REST per la ricezione degli ordini.
-- Integrazione con Stripe per la gestione dei pagamenti.
-- Workflow di elaborazione degli ordini che include validazione, pagamento, conferma e interfacciamento con sistemi di logistica.
-- Ascolto ed elaborazione degli eventi tramite RabbitMQ.
-- API di backoffice per la gestione degli ordini e dei rimborsi.
-- Gestione del magazzino legata alla conferma e cancellazione degli ordini.
-- Sicurezza basata su JWT per tutte le chiamate API.
+- Implementazione di un'API REST per la ricezione degli ordini.
+- Integrazione di pagamento con Stripe per l'autorizzazione e la cattura dei pagamenti.
+- Workflow di elaborazione ordini: validazione, pagamento, conferma e spedizione.
+- Consumer asincrono RabbitMQ per la gestione dell'aggiornamento dello stato degli ordini.
+- Integrazione con un servizio esterno di logistica per la creazione delle spedizioni e l'aggiornamento del tracking.
+- Notifiche al cliente con integrazione SendGrid.
+- API di backoffice per visualizzazione e gestione ordini inclusi i rimborsi manuali.
+- Gestione dello stock di magazzino in base agli ordini pagati e annullati.
 
 ## 5. Out of scope
-- Sviluppo di un frontend e-commerce dedicato.
-- Integrazione con altre piattaforme di pagamento oltre a Stripe.
-- Gestione di recensioni prodotti o funzioni di supporto clienti.
+- Supporto multivaluta non richiesto nel backend.
+- Non è richiesta la gestione di sconti o promozioni all'interno del workflow degli ordini.
+- Non è previsto lo sviluppo di interfacce utente.
 
 ## 6. Task tecnici ordinati
-1. Progettazione e implementazione API REST per la ricezione ordini.
-2. Integrazione con il gateway di pagamento Stripe.
-3. Sviluppo del workflow di gestione ordine con tutte le fasi operative.
-4. Configurazione e gestione di RabbitMQ per l'elaborazione degli eventi.
-5. Integrazione con servizi di logistica esterni per spedizioni e tracking.
-6. Implementazione delle API di backoffice per operatori.
-7. Gestione sicura e idempotente del magazzino.
-8. Setup del sistema di sicurezza basata su JWT.
-9. Testing e QA di tutte le componenti critiche.
+1. Definire l'architettura del microservizio e configurare l'ambiente di sviluppo.
+2. Sviluppare l'API REST per la ricezione e gestione degli ordini, inclusa la validazione dell'input.
+3. Integrare l'API con il gateway di pagamento Stripe.
+4. Implementare il workflow di elaborazione degli ordini.
+5. Configurare un consumer RabbitMQ per l'aggiornamento asincrono degli ordini.
+6. Integrare con il servizio logistico esterno via API REST.
+7. Configurare SendGrid per notifiche email/push ai clienti.
+8. Sviluppare le API per supportare il backoffice con funzioni di gestione ordini e rimborsi.
+9. Implementare i meccanismi di aggiornamento dello stock di magazzino.
+10. Assicurare la sicurezza dei dati tramite JWT e crittografia dove necessario.
 
 ## 7. Acceptance criteria
-- Gli ordini possono essere ricevuti correttamente tramite le API e mostrati nel backoffice.
-- I pagamenti tramite Stripe devono essere processati correttamente e le transazioni risultare confermate o rifiutate.
-- Il sistema deve gestire i workflow di ordine end-to-end, inclusi fallimenti e retry.
-- Gli eventi di stato ordine da RabbitMQ devono essere elaborati in tempo reale.
-- Gli stock di magazzino si aggiornano correttamente in base allo stato ordine.
-- Le chiamate API sono protette con JWT e resistono a tentativi di accesso non autorizzato.
+- L'API REST è in grado di ricevere e processare ordini correttamente e offre una risposta in tempo reale.
+- L'integrazione con Stripe deve gestire i pagamenti in modo sicuro e tracciabile.
+- Il sistema è in grado di elaborare workflow di ordine completi e gestire rollback nei casi di errore.
+- Il consumer RabbitMQ aggiorna lo stato degli ordini correttamente in modo asincrono.
+- L'integrazione logistica rispetta i termici di creazione spedizione e aggiornamento tracking.
+- Le notifiche ai clienti vengono inviate correttamente via SendGrid.
+- Le API di backoffice forniscono piena funzionalità di gestione ordini agli operatori.
+- Le operazioni critiche sono idempotenti.
+- Il sistema si dimostra sicuro, scalabile e con un'ottima performance nella gestione del carico.
 
 ## 8. Rischi e punti aperti
-- Possibili problemi di performance nel caso di alto carico di eventi sul sistema RabbitMQ.
-- Confusione o ambiguità nella gestione degli stati ordine durante il fallimento di un pagamento.
-- La necessità di ulteriori integrazioni di pagamento in futuro potrebbe richiedere un'architettura più flessibile.
-- Dipendenza forte da servizi esterni (Stripe e logistica) può introdurre ritardi o limiti operativi.
-```
+- Rischi di sicurezza relativi all'integrazione con Stripe e la gestione delle chiavi API.
+- Ambiguità nei dettagli di integrazione logistica che potrebbero influenzare il design e l'implementazione.
+- Possibili problemi di timeout e comunicazione con servizi esterni potrebbero influenzare la resilienza del sistema.
+- Mancanza di dettagli sui formati delle notifiche multicanale potrebbe influire sull'implementazione delle notifiche.
