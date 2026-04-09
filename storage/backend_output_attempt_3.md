@@ -2,86 +2,100 @@
 MODULE: BACKEND VERSION: 1
 
 ## 1. Obiettivo backend
-Progettare e implementare un backend worker per automatizzare la gestione dell'elaborazione degli eventi di ordine e pagamento in un sistema di e-commerce, rispondendo a messaggi asincroni per garantire la reattività e l'efficienza del sistema.
+Progettare un sistema backend event-driven per la gestione degli ordini, dei processi di pagamento e degli aggiornamenti logistici, utilizzando RabbitMQ per ottenere scalabilità e reattività. Questo sistema deve gestire eventi in tempo reale tramite microservizi dedicati.
 
 ## 2. Assunzioni tecniche
-- Utilizzo di RabbitMQ per la gestione e il consumo di eventi.
-- Architettura microservizi con elaborazione eventi in background.
-- Persistenza dei dati in PostgreSQL con supporto per transazioni ACID.
-- L'utilizzo di API REST per le integrazioni di servizi esterni.
+- Utilizzo di RabbitMQ per la gestione degli eventi.
+- PostgreSQL come database transazionale con supporto ACID.
+- Utilizzo di Stripe per la gestione dei pagamenti.
+- Comunicazione asincrona tramite eventi JSON conformi a schemi predefiniti.
 
 ## 3. Architettura backend
-L'architettura del backend è basata su un pattern Event-Driven tramite RabbitMQ, con consumatori dedicati a processare eventi specifici di ordini e pagamenti, ciascuno orchestrato per scalare orizzontalmente.
+Una struttura modulare composta da:
+- **OrderConsumer** per processare eventi relativi agli ordini.
+- **PaymentProcessor** per gestire e confermare i pagamenti.
+- **LogisticsUpdater** per aggiornare lo stato delle spedizioni.
 
 ## 4. Moduli e responsabilità
-- **OrderEventConsumer**: Gestisce l'elaborazione degli eventi relativi agli ordini.
-- **PaymentEventConsumer**: Gestisce l'elaborazione degli eventi di pagamento, integrandosi con Stripe.
-- **NotificationEventConsumer**: Invia notifiche relative allo stato degli ordini.
-- **Data Layer**: Gestisce l'accesso ai dati e le operazioni CRUD sui modelli.
-- **Integration Layer**: Si occupa delle integrazioni con Stripe e i servizi di logistica.
+- **order_module.py**: Gestisce la creazione e l'aggiornamento degli ordini.
+- **payment_module.py**: Integrazione e gestione dei pagamenti con Stripe.
+- **logistics_module.py**: Interazione con servizi di logistica per tracciare le spedizioni.
+- **event_handler.py**: Gestione degli eventi da RabbitMQ.
 
 ## 5. Worker / Job Design
-- **OrderEventWorker**  
-  - **Trigger**: Messaggi su RabbitMQ per nuovi ordini.  
-  - **Schema Messaggio**: Contiene `orderId`, `customerId`, `orderDetails`.  
-  - **Flusso di Elaborazione**: Consuma l'evento, valida i dati, aggiorna lo stato dell'ordine e pubblica eventi successivi.
+- **OrderConsumer**
+  - **Trigger**: Evento `order_created`
+  - **Message/Event Schema**: `orderId`, `customerId`, `amount`, `timestamp`
+  - **Flusso di Elaborazione**: Validazione dell'evento, aggiornamento dello stato ordine, invio notifiche.
 
-- **PaymentEventWorker**  
-  - **Trigger**: Messaggi su RabbitMQ per stato pagamento.  
-  - **Schema Messaggio**: Contiene `transactionId`, `status`, `amount`.  
-  - **Flusso di Elaborazione**: Consuma l'evento, interagisce con Stripe per la verifica dello stato, aggiorna lo stato del pagamento nel database.
+- **PaymentProcessor**
+  - **Trigger**: Evento `payment_processed`
+  - **Message/Event Schema**: `paymentId`, `orderId`, `status`, `timestamp`
+  - **Flusso di Elaborazione**: Integrazione con Stripe, emissione eventi sull'esito del pagamento.
+
+- **LogisticsUpdater**
+  - **Trigger**: Evento di cambio stato spedizione
+  - **Flusso di Elaborazione**: Aggiornamento del database, comunicazione con i servizi di logistica.
 
 ## 6. Business logic
-Gestione dei processi di ordine e pagamento attraverso i consumatori di eventi. Ogni consumatore implementa logica specifica per la validazione, l'aggiornamento dello stato e l'invio di notifiche, garantendo che le operazioni siano idempotenti e accurate.
+- Validazione e aggiornamento dello stato degli ordini.
+- Gestione dell'interazione e feedback con Stripe.
+- Aggiornamento continuo dello stato degli ordini e delle spedizioni.
 
 ## 7. Persistenza e integrazioni
-Attraverso PostgreSQL, le informazioni di ordini e pagamenti sono persisted utilizzando un ORM per le operazioni transazionali. L'integrazione con Stripe è gestita attraverso chiavi di idempotenza e chiamate API sicure.
+- PostgreSQL con ORM per la gestione dei dati e delle transazioni.
+- API REST di Stripe per la gestione dei pagamenti.
+- Interazione con servizi logistici esterni tramite API REST.
 
 ## 8. Idempotency e Error Handling
-- **Idempotenza**: Utilizza chiavi uniche (`orderId`, `transactionId`) per prevenire processazioni duplicate.
-- **Error Handling**: Strategie di retry con backoff esponenziale, utilizzo di DLQ per errori critici, notifiche di alerting in caso di superamento della soglia di tentativi.
+- **Strategia retry**: Massimo 3 tentativi con backoff esponenziale.
+- **DLQ** (Dead Letter Queue): Eventi irrecuperabili inseriti in una coda dedicata.
+- **Alerting**: Notifiche automatiche in caso di errori critici.
 
 ## 9. Autenticazione e autorizzazione
-Non applicabile in quanto i worker operano su eventi di sistema interni e non hanno situazioni di accesso esterno diretto.
+Non necessaria per questa architettura, focalizzata sul processamento degli eventi nel backend.
 
 ## 10. Strategia di test backend
-- **Unit Test**: 
-  - Test per la validazione degli eventi di ordini e pagamenti.
-  - Verifica dell'integrità dei dati salvati nei repository.
+- **Test unitari**
+  - Validazione eventi e flussi di elaborazione
+  - Simulazione di fallimenti transitori e gestione dei retry.
 
-- **Integration Test**: 
-  - Simulazione del flusso di elaborazione completo degli eventi.
-  - Test delle integrazioni con Stripe e RabbitMQ per confermare comunicazioni corrette.
+- **Test di integrazione**
+  - Comunicazione tra microservizi via RabbitMQ
+  - Conferma di transazioni corrette nei sistemi esterni.
+
+- **Test E2E** (end-to-end)
+  - Flusso completo: ordine-pagamento-spedizione
+  - Verifica dell'aggiornamento dello stato ordini e notifiche.
 
 ## 11. Rischi tecnici
-- **Ritardi nelle Integrazioni Esterne**: Potenziali latenze nelle comunicazioni con Stripe o sistemi di logistica.
-- **Gestione Concorrenza**: Necessità di sincronizzazione nello stato ordine e pagamento in scenari ad alta concorrenza.
-- **Scalabilità**: Richiede gestione avanzata per lo scaling di RabbitMQ e dei database per mantenerne le performance.
+- Potenziali colli di bottiglia su RabbitMQ.
+- Fallimenti dei servizi esterni come Stripe possono influenzare le prestazioni.
+- Coerenza dei dati in sistemi distribuiti durante errori di rete.
 
 ## 12. Struttura file proposta
 ```
-/src
-  /consumers
-    order_event_consumer.py    # Consumer eventi ordini
-    payment_event_consumer.py  # Consumer eventi pagamenti
-    notification_event_consumer.py  # Consumer eventi notifiche
-  /data
-    repositories.py             # Operazioni CRUD su modelli
-  /integrations
-    stripe_integration.py      # Gestione integrazione Stripe
-    logistics_integration.py   # Gestione integrazione serv. logistica
+/backend
+  /consumer
+    order_consumer.py       # Gestione degli eventi ordine
+  /processor
+    payment_processor.py    # Gestione dei pagamenti
+  /updater
+    logistics_updater.py    # Aggiornamento stato spedizioni
+  /handlers
+    event_handler.py        # Gestione comunicazione RabbitMQ
   /config
-    settings.py                # Configurazioni ambiente (RabbitMQ, DB)
+    settings.py             # Configurazione ambiente
   /tests
-    test_consumers.py          # Unit e integrati per eventi
-    test_integrations.py       # Test per integrazioni esterne
+    test_order.py           # Test unitari e integrati sugli ordini
+    test_payment.py         # Test pagamenti
+    test_integration.py     # Test di integrazione completa
 ```
 
 ## 13. Piano di implementazione
-1. **Infrastruttura**: Setup di RabbitMQ e PostgreSQL con configurazione di ambiente.
-2. **Sviluppo Consumers**: Implementazione dei worker per la gestione degli eventi ordini e pagamenti.
-3. **Integrazioni Esterne**: Configurazione delle API per Stripe e servizi logistici.
-4. **Testing**: Implementazione di unit e integration test per validare i flussi di elaborazione.
-5. **Monitoraggio e Logging**: Setup di strumenti per il monitoraggio delle operazioni e gestione dei log.
-6. **Deployment**: Pianificazione e esecuzione del deployment in ambiente di produzione.
+1. **Configurazione Ambienti**: Setup di RabbitMQ e PostgreSQL, configurare le variabili ambiente.
+2. **Sviluppo Moduli**: Implementazione dei moduli per la gestione degli eventi e integrazioni esterne.
+3. **Integrazione RabbitMQ**: Configurare code ed exchange per eventi.
+4. **Testing e Validazione**: Sviluppo ed esecuzione di test unitari e di integrazione.
+5. **Deploy**: Preparazione di ambienti di staging e produzione con configurazione sicura.
 ```

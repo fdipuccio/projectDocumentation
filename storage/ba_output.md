@@ -1,70 +1,57 @@
-```
+```markdown
 MODULE: BA VERSION: 1
 
 ## 1. Requisiti funzionali
-
-- **Ricezione ordini tramite API REST**
-  - Creare endpoint RESTful per la ricezione degli ordini.
-  - Assicurarsi che gli ordini contengano tutte le informazioni necessarie per la corretta elaborazione.
-
-- **Integrazione con gateway di pagamento (Stripe)**
-  - Implementare flussi di authorization e capture per gestire i pagamenti con Stripe.
-  - Gestire le transazioni fallite e garantire l'idempotenza nelle operazioni di pagamento.
-
-- **Workflow di elaborazione ordine**
-  - Sequenza di operazioni: validazione → pagamento → conferma → spedizione.
-  - Gestione di eventuali errori con meccanismi di compensazione.
-
-- **Consumer asincrono per eventi di aggiornamento stato**
-  - Utilizzare RabbitMQ per la gestione di eventi asincroni di aggiornamento stato ordine.
-
-- **Integrazione con servizio esterno di logistica**
-  - Creare e ottenere tracking delle spedizioni dal servizio di logistica esterno.
-
-- **Notifiche email/push al cliente**
-  - Inviare notifiche su ogni cambio di stato ordine tramite SendGrid.
-  - Supportare notifiche sia email sia push.
-
-- **API di backoffice per operatori**
-  - Fornire funzionalità per elenco ordini, dettagli ordine e gestione rimborsi.
-  - Implementare endpoint per funzioni amministrative.
-
-- **Gestione magazzino**
-  - Scalare stock al pagamento confermato.
-  - Ripristinare stock in caso di cancellazione dell'ordine.
+- **Ricezione ordini tramite API REST**: Implementazione di endpoint per consentire la creazione di nuovi ordini da parte di sistemi esterni.
+- **Integrazione con gateway di pagamento (Stripe)**: Supporto per le operazioni di authorization e capture, gestendo anche le notifiche di stato dai webhook di Stripe.
+- **Workflow di elaborazione ordine**:
+  - **Validazione**: Validare i dati ordine, controllare la disponibilità prodotto e la correttezza dell'indirizzo di spedizione.
+  - **Pagamento**: Effettuare l'addebito tramite Stripe e gestire le transazioni.
+  - **Conferma**: Aggiornare lo stato ordine a confermato.
+  - **Spedizione**: Interazione con il sistema di logistica per la creazione della spedizione.
+- **Consumer asincrono per eventi di aggiornamento stato ordine da queue (RabbitMQ)**: Ascolto ed elaborazione degli eventi di cambio stato ordine.
+- **Integrazione con servizio esterno di logistica**: Chiamate API per la creazione delle spedizioni e il tracking.
+- **Notifiche email/push al cliente**: Integrazione con SendGrid per l'invio automatico di notifiche email/push a ogni cambio di stato.
+- **API di backoffice per operatori**: 
+  - **Lista ordini**: Endpoint per ottenere l'elenco degli ordini.
+  - **Dettaglio ordine**: Visualizzazione dettagliata di un ordine selezionato.
+  - **Rimborso manuale**: Funzionalità per gestire i rimborsi su richiesta.
+- **Gestione magazzino**: 
+  - **Scalare stock**: Riduzione dello stock disponibile a conferma del pagamento.
+  - **Ripristinare**: Reintegro dello stock nel caso di cancellazione dell'ordine.
 
 ## 2. Requisiti non funzionali
-
-- **Sicurezza**: Autenticazione e autorizzazione tramite JWT per proteggere le API.
-- **Performance**: Il sistema deve rispondere in modo efficiente alle richieste di API e avere tempi di latenza minimi.
-- **Scalabilità**: Supporto per aumentare la capacità di gestire richieste crescenti tramite l'architettura a microservizi.
-- **Logging**: Implementare audit log dettagliati per tutte le transizioni di stato ordine.
-- **Monitoraggio**: Predisporre strumenti per monitorare l'uptime, le performance del sistema e le code di messaggi.
+- **Sicurezza**: Utilizzo di JWT per autenticare le API, crittografia dei dati sensibili, validazione e sanitizzazione input.
+- **Performance**: Sistemi di caching per migliorare la risposta delle API, bilanciamento del carico se necessario.
+- **Scalabilità**: Microservizi indipendenti con possibilità di scaling orizzontale.
+- **Logging e Monitoraggio**: Implementare sistemi di logging per audit trail e strumenti di monitoraggio per la sorveglianza del sistema.
 
 ## 3. Ambiguità e domande aperte
-
-- **Notifiche push**: È necessario definire il provider da usare per le notifiche push (e.g., Firebase, altro)?
-- **Authorization details with Stripe**: Quali parametri specifici dovremmo gestire per l'integrazione con Stripe?
+- **Modalità di pagamento supportate da Stripe**: Esistono limiti o preferenze sui metodi di pagamento che verranno supportati?
+  - *Assunzione*: Supporteremo le carte di credito principali.
+- **Conferma della spedizione**: Cosa determina esattamente la conferma della spedizione? Un evento dal servizio di logistica?
+  - *Assunzione*: La conferma avviene al ricevimento di un evento di avvenuta spedizione.
+- **Notifiche push**: Sono previste integrazioni specifiche per notifiche push o solo email?
+  - *Assunzione*: Attualmente, solo email tramite SendGrid.
   
-Assunzione: Utilizzeremo le opzioni di default e best practice per le aree non specificate.
-
 ## 4. Edge case e scenari limite
-
-- Cosa succede se un ordine viene ricevuto senza alcune informazioni essenziali?
-- Come gestire ordini duplicati o pagamento doppio nei casi di retry?
-- Gestione della restituzione di fondi nel caso in cui l'integrazione logistica fallisca.
+- **Fallimento dell'addebito su Stripe dopo la conferma ordine**: Gestione dello stato ordine in caso di fallimento transazioni successive alla conferma iniziale.
+- **Gestione degli annullamenti parziali**: Se un ordine multi-articolo viene annullato parzialmente, come gestire lo stock ed eventuali rimborsi?
+- **Timeout delle richieste API al servizio di logistica**: Il sistema deve gestire opportunamente i timeout o i ritardi nelle risposte.
 
 ## 5. Dipendenze e vincoli
-
-- La ricezione degli ordini tramite API è dipendente dall'avere endpoint sicuri e validati.
-- Gli ordini non possono proseguire in stato "spedizione" senza conferma dal sistema logistico.
-- La gestione delle notifiche richiede un'integrazione stabile con SendGrid e definizione chiara dei trigger di stato.
-- Vincoli di transazioni ACID su PostgreSQL per operazioni critiche, richiedendo un'attenzione aggiuntiva per le garanzie di rollback.
-
+- **Dipendenze tra funzionalità**:
+  - L'integrazione con Stripe è cruciale per il workflow di pagamento.
+  - L'integrazione con il servizio di logistica è necessaria per completare il workflow di spedizione.
+- **Vincoli tecnici**:
+  - Microservizi autonomi con deployabili indipendenti.
+  - PostgreSQL come database ACID per garantire l'integrità dei dati.
+  - Resilienza con retry automatici per la comunicazione con payment e logistica.
+- **Vincoli di business**:
+  - Tempi di elaborazione ordine per garantire un servizio competitivo.
+  
 ## 6. Requisiti esclusi esplicitamente
-
-- Non sono richieste integrazioni con altri metodi di pagamento oltre a Stripe.
-- Non è menzionato un front-end per i clienti finali, quindi non è incluso in questo progetto.
-- Non è richiesta la gestione delle promozioni o scontistiche sugli ordini.
-
+- **Sviluppo di un frontend di e-commerce**: Non è richiesto lo sviluppo di una componente frontend per l'e-commerce.
+- **Supporto per altre piattaforme di pagamento**: L'integrazione è limitata a Stripe.
+- **Gestione delle recensioni prodotti o supporto clienti**: Funzionalità non menzionate e quindi escluse.
 ```

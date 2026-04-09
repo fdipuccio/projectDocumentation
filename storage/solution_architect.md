@@ -1,3 +1,4 @@
+```markdown
 # Architettura Backend per E-commerce Management
 
 ## 1. Pattern architetturale scelto
@@ -9,7 +10,7 @@ Il pattern architetturale scelto è l'**Event-Driven Microservices**, motivato d
 ### Componenti principali:
 - **Order Service**: Gestisce la ricezione e il ciclo di vita degli ordini. Include endpoint REST per l'interfacciamento con i consumatori.
 - **Payment Service**: Gestisce i flussi di authorization e capture con Stripe.
-- **Notification Service**: Si occupa dell'invio di notifiche email e push attraverso SendGrid e (possibilmente) Firebase Cloud Messaging.
+- **Notification Service**: Si occupa dell'invio di notifiche email e push attraverso SendGrid.
 - **Logistics Service**: Interfaccia con il servizio logistico esterno per creare e tracciare le spedizioni.
 - **Inventory Service**: Mantiene aggiornato lo stato dello stock, sincronizzandosi con gli altri componenti in tempo reale.
 - **Backoffice API**: Espone funzionalità amministrative per gestione ordini e rimborsi.
@@ -37,5 +38,4 @@ Il pattern architetturale scelto è l'**Event-Driven Microservices**, motivato d
 - **Security and Compliance**: Verificare che tutte le chiamate API seguano politiche di sicurezza e che sia attivo il monitoraggio per compliance.
 
 ---
-
-Questa architettura serve da guida vincolante per sviluppatori di API e di integrazione, assicurando coerenza nell'implementazione del backend per la gestione ordini dell'e-commerce.
+```

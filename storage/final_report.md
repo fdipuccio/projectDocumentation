@@ -12,154 +12,161 @@
 MODULE: PM VERSION: 1
 
 ## 1. Obiettivo
-Sviluppare un sistema backend per la gestione degli ordini e-commerce, integrato con servizi esterni, per automatizzare il flusso di gestione ordini e migliorare l'efficienza operativa.
+Creare un sistema backend per la gestione efficiente e scalabile degli ordini e-commerce, con funzionalità di integrazione a servizi esterni.
 
 ## 2. Contesto e vincoli
-- Il sistema sarà un microservizio autonomo, che può essere deployato indipendentemente.
-- Persistenza su PostgreSQL con transazioni ACID per garantire coerenza e rollback delle operazioni critiche.
-- Comunicazione tra microservizi mediante eventi asincroni gestiti da RabbitMQ.
-- Autenticazione e autorizzazione tramite JWT per la sicurezza delle API.
-- L'unico metodo di pagamento gestito sarà Stripe, con flussi di authorization e capture.
-- Logging e audit dettagliato di tutte le transazioni order state.
+Il sistema dovrà essere composto da microservizi autonomi con la capacità di deployment indipendente. Utilizzerà PostgreSQL per la persistenza dei dati, supportando transazioni ACID per garantire l'integrità. La comunicazione con servizi esterni, come sistemi di pagamento e logistica, dovrà essere resiliente, con retry automatici in caso di fallimenti transitori. JWT verrà utilizzato per autenticazione, garantendo la sicurezza delle API. L'idempotenza è essenziale per prevenire duplicati in operazioni critiche.
 
 ## 3. Assunzioni
-- Verranno seguite le opzioni di default e le best practice per tutte le aree non specificate.
-- Le notifiche push useranno un provider ancora da definire.
-- I parametri specifici per l'integrazione con Stripe seguiranno la documentazione standard di Stripe.
+- L'integrazione con Stripe supporterà le principali carte di credito.
+- La conferma della spedizione verrà determinata da un evento ricevuto dal servizio di logistica.
+- Le notifiche push non sono richieste; si implementeranno solo le email tramite SendGrid.
+- Il sistema è costruito utilizzando Java per le API REST e si appoggerà ad Architetture Bear per il design dei microservizi.
 
 ## 4. Scope MVP
-- Creazione di endpoint REST per la ricezione di ordini con tutte le informazioni necessarie.
+- Implementare API REST per la ricezione degli ordini.
 - Integrazione con Stripe per la gestione dei pagamenti.
-- Implementazione del workflow di elaborazione ordini: validazione, pagamento, conferma, spedizione.
-- Uso di RabbitMQ per eventi di aggiornamento stato ordine.
-- Integrazione con il servizio esterno di logistica per tracking spedizioni.
-- Invio di notifiche tramite email e push tramite SendGrid.
-- Fornitura di API di backoffice per gestire ordini e rimborsi.
-- Gestione della sincronizzazione del magazzino.
+- Workflow di elaborazione degli ordini che include validazione, pagamento, conferma e interfacciamento con sistemi di logistica.
+- Ascolto ed elaborazione degli eventi tramite RabbitMQ.
+- API di backoffice per la gestione degli ordini e dei rimborsi.
+- Gestione del magazzino legata alla conferma e cancellazione degli ordini.
+- Sicurezza basata su JWT per tutte le chiamate API.
 
 ## 5. Out of scope
-- Nessun front-end per i clienti finali è incluso.
-- Nessuna integrazione con metodi di pagamento diversi da Stripe.
-- Non è richiesta la gestione di promozioni o scontistiche.
+- Sviluppo di un frontend e-commerce dedicato.
+- Integrazione con altre piattaforme di pagamento oltre a Stripe.
+- Gestione di recensioni prodotti o funzioni di supporto clienti.
 
 ## 6. Task tecnici ordinati
-1. Progettazione e creazione degli endpoint REST per la ricezione ordini.
-2. Implementazione dell'integrazione con Stripe per authorization e capture.
-3. Sviluppo del workflow di elaborazione ordine, comprese validazioni e compensazioni di errori.
-4. Configurazione di RabbitMQ per gestione eventi di stato.
-5. Sviluppo dell'integrazione con il servizio logistico esterno per spedizioni.
-6. Implementazione dell'invio di notifiche tramite SendGrid.
-7. Sviluppo delle API di backoffice per la gestione ordini.
-8. Implementazione del sistema di gestione magazzino integrato.
-9. Setup della sicurezza delle API con JWT.
-10. Implementazione di logging e audit log per le transizioni di stato ordine.
+1. Progettazione e implementazione API REST per la ricezione ordini.
+2. Integrazione con il gateway di pagamento Stripe.
+3. Sviluppo del workflow di gestione ordine con tutte le fasi operative.
+4. Configurazione e gestione di RabbitMQ per l'elaborazione degli eventi.
+5. Integrazione con servizi di logistica esterni per spedizioni e tracking.
+6. Implementazione delle API di backoffice per operatori.
+7. Gestione sicura e idempotente del magazzino.
+8. Setup del sistema di sicurezza basata su JWT.
+9. Testing e QA di tutte le componenti critiche.
 
 ## 7. Acceptance criteria
-- Gli endpoint REST devono ricevere ordini con tutte le informazioni necessarie per l'elaborazione.
-- Stripe deve essere correttamente integrato e gestire correttamente i pagamenti, incluse situazioni di retry.
-- Il workflow di elaborazione ordine deve seguire la sequenza definita con meccanismi di compensazione operativi.
-- RabbitMQ deve gestire efficacemente gli eventi asincroni di aggiornamento stato ordine.
-- L'integrazione logistica deve fornire correttamente il tracking delle spedizioni.
-- Notifiche devono essere inviate a ogni cambio di stato ordine.
-- Le API di backoffice devono permettere la gestione degli ordini e dei rimborsi.
-- Il sistema di gestione magazzino deve scalare e ripristinare stock correttamente.
+- Gli ordini possono essere ricevuti correttamente tramite le API e mostrati nel backoffice.
+- I pagamenti tramite Stripe devono essere processati correttamente e le transazioni risultare confermate o rifiutate.
+- Il sistema deve gestire i workflow di ordine end-to-end, inclusi fallimenti e retry.
+- Gli eventi di stato ordine da RabbitMQ devono essere elaborati in tempo reale.
+- Gli stock di magazzino si aggiornano correttamente in base allo stato ordine.
+- Le chiamate API sono protette con JWT e resistono a tentativi di accesso non autorizzato.
 
 ## 8. Rischi e punti aperti
-- La gestione delle notifiche push è ambigua, poiché il provider non è stato ancora deciso.
-- Dettagli sui parametri di authorization con Stripe necessitano di ulteriori chiarimenti.
-- Come gestire ordini ricevuti senza alcune informazioni essenziali non è definito.
-- Potenziali rischi di fallimento in transazioni critiche e necessità di retry.
-- Gestione delle restituzioni di fondi nel caso di problemi con il sistema logistico. 
+- Possibili problemi di performance nel caso di alto carico di eventi sul sistema RabbitMQ.
+- Confusione o ambiguità nella gestione degli stati ordine durante il fallimento di un pagamento.
+- La necessità di ulteriori integrazioni di pagamento in futuro potrebbe richiedere un'architettura più flessibile.
+- Dipendenza forte da servizi esterni (Stripe e logistica) può introdurre ritardi o limiti operativi.
 ```
+
 
 ## Backend Output
 ```markdown
 MODULE: BACKEND VERSION: 1
 
 ## 1. Obiettivo backend
-Progettare e implementare un backend worker per automatizzare la gestione dell'elaborazione degli eventi di ordine e pagamento in un sistema di e-commerce, rispondendo a messaggi asincroni per garantire la reattività e l'efficienza del sistema.
+Progettare un sistema backend event-driven per la gestione degli ordini, dei processi di pagamento e degli aggiornamenti logistici, utilizzando RabbitMQ per ottenere scalabilità e reattività. Questo sistema deve gestire eventi in tempo reale tramite microservizi dedicati.
 
 ## 2. Assunzioni tecniche
-- Utilizzo di RabbitMQ per la gestione e il consumo di eventi.
-- Architettura microservizi con elaborazione eventi in background.
-- Persistenza dei dati in PostgreSQL con supporto per transazioni ACID.
-- L'utilizzo di API REST per le integrazioni di servizi esterni.
+- Utilizzo di RabbitMQ per la gestione degli eventi.
+- PostgreSQL come database transazionale con supporto ACID.
+- Utilizzo di Stripe per la gestione dei pagamenti.
+- Comunicazione asincrona tramite eventi JSON conformi a schemi predefiniti.
 
 ## 3. Architettura backend
-L'architettura del backend è basata su un pattern Event-Driven tramite RabbitMQ, con consumatori dedicati a processare eventi specifici di ordini e pagamenti, ciascuno orchestrato per scalare orizzontalmente.
+Una struttura modulare composta da:
+- **OrderConsumer** per processare eventi relativi agli ordini.
+- **PaymentProcessor** per gestire e confermare i pagamenti.
+- **LogisticsUpdater** per aggiornare lo stato delle spedizioni.
 
 ## 4. Moduli e responsabilità
-- **OrderEventConsumer**: Gestisce l'elaborazione degli eventi relativi agli ordini.
-- **PaymentEventConsumer**: Gestisce l'elaborazione degli eventi di pagamento, integrandosi con Stripe.
-- **NotificationEventConsumer**: Invia notifiche relative allo stato degli ordini.
-- **Data Layer**: Gestisce l'accesso ai dati e le operazioni CRUD sui modelli.
-- **Integration Layer**: Si occupa delle integrazioni con Stripe e i servizi di logistica.
+- **order_module.py**: Gestisce la creazione e l'aggiornamento degli ordini.
+- **payment_module.py**: Integrazione e gestione dei pagamenti con Stripe.
+- **logistics_module.py**: Interazione con servizi di logistica per tracciare le spedizioni.
+- **event_handler.py**: Gestione degli eventi da RabbitMQ.
 
 ## 5. Worker / Job Design
-- **OrderEventWorker**  
-  - **Trigger**: Messaggi su RabbitMQ per nuovi ordini.  
-  - **Schema Messaggio**: Contiene `orderId`, `customerId`, `orderDetails`.  
-  - **Flusso di Elaborazione**: Consuma l'evento, valida i dati, aggiorna lo stato dell'ordine e pubblica eventi successivi.
+- **OrderConsumer**
+  - **Trigger**: Evento `order_created`
+  - **Message/Event Schema**: `orderId`, `customerId`, `amount`, `timestamp`
+  - **Flusso di Elaborazione**: Validazione dell'evento, aggiornamento dello stato ordine, invio notifiche.
 
-- **PaymentEventWorker**  
-  - **Trigger**: Messaggi su RabbitMQ per stato pagamento.  
-  - **Schema Messaggio**: Contiene `transactionId`, `status`, `amount`.  
-  - **Flusso di Elaborazione**: Consuma l'evento, interagisce con Stripe per la verifica dello stato, aggiorna lo stato del pagamento nel database.
+- **PaymentProcessor**
+  - **Trigger**: Evento `payment_processed`
+  - **Message/Event Schema**: `paymentId`, `orderId`, `status`, `timestamp`
+  - **Flusso di Elaborazione**: Integrazione con Stripe, emissione eventi sull'esito del pagamento.
+
+- **LogisticsUpdater**
+  - **Trigger**: Evento di cambio stato spedizione
+  - **Flusso di Elaborazione**: Aggiornamento del database, comunicazione con i servizi di logistica.
 
 ## 6. Business logic
-Gestione dei processi di ordine e pagamento attraverso i consumatori di eventi. Ogni consumatore implementa logica specifica per la validazione, l'aggiornamento dello stato e l'invio di notifiche, garantendo che le operazioni siano idempotenti e accurate.
+- Validazione e aggiornamento dello stato degli ordini.
+- Gestione dell'interazione e feedback con Stripe.
+- Aggiornamento continuo dello stato degli ordini e delle spedizioni.
 
 ## 7. Persistenza e integrazioni
-Attraverso PostgreSQL, le informazioni di ordini e pagamenti sono persisted utilizzando un ORM per le operazioni transazionali. L'integrazione con Stripe è gestita attraverso chiavi di idempotenza e chiamate API sicure.
+- PostgreSQL con ORM per la gestione dei dati e delle transazioni.
+- API REST di Stripe per la gestione dei pagamenti.
+- Interazione con servizi logistici esterni tramite API REST.
 
 ## 8. Idempotency e Error Handling
-- **Idempotenza**: Utilizza chiavi uniche (`orderId`, `transactionId`) per prevenire processazioni duplicate.
-- **Error Handling**: Strategie di retry con backoff esponenziale, utilizzo di DLQ per errori critici, notifiche di alerting in caso di superamento della soglia di tentativi.
+- **Strategia retry**: Massimo 3 tentativi con backoff esponenziale.
+- **DLQ** (Dead Letter Queue): Eventi irrecuperabili inseriti in una coda dedicata.
+- **Alerting**: Notifiche automatiche in caso di errori critici.
 
 ## 9. Autenticazione e autorizzazione
-Non applicabile in quanto i worker operano su eventi di sistema interni e non hanno situazioni di accesso esterno diretto.
+Non necessaria per questa architettura, focalizzata sul processamento degli eventi nel backend.
 
 ## 10. Strategia di test backend
-- **Unit Test**: 
-  - Test per la validazione degli eventi di ordini e pagamenti.
-  - Verifica dell'integrità dei dati salvati nei repository.
+- **Test unitari**
+  - Validazione eventi e flussi di elaborazione
+  - Simulazione di fallimenti transitori e gestione dei retry.
 
-- **Integration Test**: 
-  - Simulazione del flusso di elaborazione completo degli eventi.
-  - Test delle integrazioni con Stripe e RabbitMQ per confermare comunicazioni corrette.
+- **Test di integrazione**
+  - Comunicazione tra microservizi via RabbitMQ
+  - Conferma di transazioni corrette nei sistemi esterni.
+
+- **Test E2E** (end-to-end)
+  - Flusso completo: ordine-pagamento-spedizione
+  - Verifica dell'aggiornamento dello stato ordini e notifiche.
 
 ## 11. Rischi tecnici
-- **Ritardi nelle Integrazioni Esterne**: Potenziali latenze nelle comunicazioni con Stripe o sistemi di logistica.
-- **Gestione Concorrenza**: Necessità di sincronizzazione nello stato ordine e pagamento in scenari ad alta concorrenza.
-- **Scalabilità**: Richiede gestione avanzata per lo scaling di RabbitMQ e dei database per mantenerne le performance.
+- Potenziali colli di bottiglia su RabbitMQ.
+- Fallimenti dei servizi esterni come Stripe possono influenzare le prestazioni.
+- Coerenza dei dati in sistemi distribuiti durante errori di rete.
 
 ## 12. Struttura file proposta
 ```
-/src
-  /consumers
-    order_event_consumer.py    # Consumer eventi ordini
-    payment_event_consumer.py  # Consumer eventi pagamenti
-    notification_event_consumer.py  # Consumer eventi notifiche
-  /data
-    repositories.py             # Operazioni CRUD su modelli
-  /integrations
-    stripe_integration.py      # Gestione integrazione Stripe
-    logistics_integration.py   # Gestione integrazione serv. logistica
+/backend
+  /consumer
+    order_consumer.py       # Gestione degli eventi ordine
+  /processor
+    payment_processor.py    # Gestione dei pagamenti
+  /updater
+    logistics_updater.py    # Aggiornamento stato spedizioni
+  /handlers
+    event_handler.py        # Gestione comunicazione RabbitMQ
   /config
-    settings.py                # Configurazioni ambiente (RabbitMQ, DB)
+    settings.py             # Configurazione ambiente
   /tests
-    test_consumers.py          # Unit e integrati per eventi
-    test_integrations.py       # Test per integrazioni esterne
+    test_order.py           # Test unitari e integrati sugli ordini
+    test_payment.py         # Test pagamenti
+    test_integration.py     # Test di integrazione completa
 ```
 
 ## 13. Piano di implementazione
-1. **Infrastruttura**: Setup di RabbitMQ e PostgreSQL con configurazione di ambiente.
-2. **Sviluppo Consumers**: Implementazione dei worker per la gestione degli eventi ordini e pagamenti.
-3. **Integrazioni Esterne**: Configurazione delle API per Stripe e servizi logistici.
-4. **Testing**: Implementazione di unit e integration test per validare i flussi di elaborazione.
-5. **Monitoraggio e Logging**: Setup di strumenti per il monitoraggio delle operazioni e gestione dei log.
-6. **Deployment**: Pianificazione e esecuzione del deployment in ambiente di produzione.
+1. **Configurazione Ambienti**: Setup di RabbitMQ e PostgreSQL, configurare le variabili ambiente.
+2. **Sviluppo Moduli**: Implementazione dei moduli per la gestione degli eventi e integrazioni esterne.
+3. **Integrazione RabbitMQ**: Configurare code ed exchange per eventi.
+4. **Testing e Validazione**: Sviluppo ed esecuzione di test unitari e di integrazione.
+5. **Deploy**: Preparazione di ambienti di staging e produzione con configurazione sicura.
 ```
+
 
 ## QA Output
 MODULE: QA  
@@ -167,56 +174,60 @@ VERSION: 1
 FINAL_STATUS: REJECTED
 
 ## 1. Checklist — Copertura requisiti
-* [NO] Gli endpoint REST devono ricevere ordini con tutte le informazioni necessarie per l'elaborazione. — Nessuna menzione specifica degli endpoint REST nell'architettura proposta.
-* [PARZIALE] Stripe deve essere correttamente integrato e gestire correttamente i pagamenti, incluse situazioni di retry. — L'integrazione con Stripe è menzionata, ma manca una descrizione dettagliata delle situazioni di retry.
-* [SI] Il workflow di elaborazione ordine deve seguire la sequenza definita con meccanismi di compensazione operativi. — I meccanismi di compensazione sono accennati con l'idempotenza e gestione errori.
-* [SI] RabbitMQ deve gestire efficacemente gli eventi asincroni di aggiornamento stato ordine. — Usato come sistema principale per la gestione degli eventi.
-* [NO] L'integrazione logistica deve fornire correttamente il tracking delle spedizioni. — L'integrazione logistica è menzionata ma non dettagliata.
-* [NO] Notifiche devono essere inviate a ogni cambio di stato ordine. — L'invio delle notifiche non è dettagliato chiaramente, soprattutto in assenza di informazioni sul provider di push notifications ancora da definire.
-* [NO] Le API di backoffice devono permettere la gestione degli ordini e dei rimborsi. — Nessuna menzione delle API di backoffice nella proposta.
-* [NO] Il sistema di gestione magazzino deve scalare e ripristinare stock correttamente. — Manca menzione di un sistema di gestione magazzino.
+
+* [NO] Gli ordini possono essere ricevuti correttamente tramite le API e mostrati nel backoffice — La proposta non menziona nulla sul backoffice, mancando uno degli acceptance criteria.
+* [SI] I pagamenti tramite Stripe devono essere processati correttamente e le transazioni risultare confermate o rifiutate — La proposta dettaglia il PaymentProcessor e l'integrazione con Stripe.
+* [SI] Il sistema deve gestire i workflow di ordine end-to-end, inclusi fallimenti e retry — Indica strategie di retry e DLQ per gestire i fallimenti.
+* [SI] Gli eventi di stato ordine da RabbitMQ devono essere elaborati in tempo reale — Utilizzo dichiarato di RabbitMQ per la gestione di eventi in tempo reale.
+* [NO] Gli stock di magazzino si aggiornano correttamente in base allo stato ordine — Nessuna indicazione di gestione del magazzino è presente.
+* [NO] Le chiamate API sono protette con JWT e resistono a tentativi di accesso non autorizzato — Non c'è menzione di JWT o sicurezza API nell'autenticazione.
+
+* Gate critico: REJECTED, mancano troppi criteri fondamentali.
 
 ## 2. Checklist — Contratti API
-* [NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto.
-* [NO] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario).
-* [NO] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme).
-* [NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint.
-* [NO] La strategia di paginazione è definita per le liste (se applicabile).
+
+* [NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — La proposta non descrive in dettaglio gli endpoint API.
+* [NO] Le regole di validazione sono esplicite per ogni campo — Mancanza di dettagli sulle regole di validazione.
+* [NO] Il formato degli errori è consistente tra tutti gli endpoint — Assenza di descrizione sul formato degli errori.
+* [NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Non specificati.
+* [NO] La strategia di paginazione è definita per le liste — Nessuna menzione della paginazione.
 
 ## 3. Checklist — Business logic e scenari limite
-* [NO] I flussi principali sono descritti passo per passo (non solo a parole generiche). — La descrizione rimane ad alto livello senza dettagli sui singoli passi.
-* [PARZIALE] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition). — Accennato il problema della concorrenza, ma manca una strategia dettagliata.
-* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker). — Gestione errore con retry e DLQ menzionati.
-* [NO] Le regole di business critiche sono esplicite e non ambigue. — Mancanza di una descrizione esaustiva delle regole.
+
+* [PARZIALE] I flussi principali sono descritti passo per passo — I flussi sono accennati ma non dettagliati sufficientemente.
+* [NO] Gli scenari di concorrenza sono trattati — Nessuna menzione di come gestire la concorrenza.
+* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia — Presente strategia di retry e DLQ.
+* [SI] Le regole di business critiche sono esplicite e non ambigue — Le regole sono esplicitamente definite nella logica di business.
 
 ## 4. Checklist — Persistenza e schema dati
-* [NO] Le tabelle/collezioni principali sono definite con i campi e i tipi. — Mancanza di dettagli strutturali.
-* [NO] Gli indici sono specificati per le colonne usate in query frequenti o join. — Nessuna menzione di indici.
-* [NO] I vincoli di unicità e foreign key sono dichiarati. — Mancano informazioni su questi aspetti.
-* [NO] La strategia di migrazione dello schema è menzionata. — Non menzionata.
+
+* [NO] Le tabelle/collezioni principali sono definite con i campi e i tipi — Non dettagliate le strutture dei dati.
+* [NO] Gli indici sono specificati per le colonne usate in query frequenti o join — Non menzionati.
+* [NO] I vincoli di unicità e foreign key sono dichiarati — Non discussi.
+* [NO] La strategia di migrazione dello schema è menzionata — Non menzionata.
 
 ## 5. Checklist — Strategia di test
-* [NO] Esistono test per i happy path di ogni funzionalità principale. — Test menzionati ma non dettagliati per i singoli happy path.
-* [PARZIALE] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized). — Test per errori accennati, ma manca dettaglio.
-* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni). — Menzionati test di integrazione per RabbitMQ e Stripe.
-* [PARZIALE] I test specificano input e expected output concreti (non generici). — Manca una specificità negli esempi.
+
+* [SI] Esistono test per i happy path di ogni funzionalità principale — Sono menzionati test per flussi principali.
+* [SI] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Indicano test per simulare fallimenti.
+* [PARZIALE] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Menziati ma senza molti dettagli specifici.
+* [NO] I test specificano input e expected output concreti (non generici) — Non ci sono dettagli su input e output nei test.
 
 ## 6. Requisiti mancanti
-- Endpoint REST per la ricezione degli ordini.
-- Integrazione dettagliata con il sistema logistico per tracking spedizioni.
-- Descrizione dettagliata dell'invio di notifiche e provider di notifiche push.
-- API di backoffice per gestire ordini e rimborsi.
-- Sistema di gestione del magazzino.
+
+- Backoffice gestione ordini.
+- Sicurezza basata su JWT per protezione API.
+- Gestione dello stock di magazzino.
 
 ## 7. Rischi e problemi
-- Ritardi nelle integrazioni esterne: ALTA
-- Scarsa definizione delle API e regole di business: MEDIA
-- Mancanza di dettagli sui sistemi di notifica: ALTA
-- Concorrenza e sincronizzazione: MEDIA
+
+- Severità ALTA: Assenza di sicurezza API (JWT), impatto sulla sicurezza delle chiamate API.
+- Severità ALTA: Mancanza gestione stock magazzino, impatto sulla consistenza degli ordini.
 
 ## 8. Azioni richieste
-- [PRIORITÀ ALTA] Definire in dettaglio gli endpoint REST: metodo, path, schema richiesta e risposta.
-- [PRIORITÀ ALTA] Dettagliare l'integrazione con il sistema logistico per tracking spedizioni.
-- [PRIORITÀ ALTA] Fornire specificità su API di backoffice per ordini e rimborsi.
-- [PRIORITÀ MEDIA] Definire la strategia di migrazione dello schema dati.
-- [PRIORITÀ MEDIA] Dettagliare la gestione degli scenari di concorrenza con strategie concrete.
+
+- [PRIORITÀ ALTA] Integrare la gestione del backoffice per ordini.
+- [PRIORITÀ ALTA] Implementare la gestione dello stock di magazzino.
+- [PRIORITÀ ALTA] Implementare security API con JWT.
+- [PRIORITÀ ALTA] Dettagliare le specifiche API per ogni endpoint.
+- [PRIORITÀ MEDIA] Introdurre trattamenti per scenari di concorrenza.

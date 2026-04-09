@@ -5,32 +5,31 @@ ARCH_STATUS: REJECTED
 ## 1. Checklist — Completezza architetturale
 * `[SI]` Pattern architetturale scelto e giustificato
 * `[SI]` Component diagram con componenti e responsabilità
-* `[NO]` Contratti tra moduli con formati dati - Mancano dettagli su campi, tipi e formati specifici.
+* `[NO]` Contratti tra moduli con formati dati - Dettagli insufficienti sugli schemi degli eventi nel sistema RabbitMQ.
 * `[SI]` Decisioni architetturali documentate (ADR)
-* `[NO]` Linee guida azionabili per gli specialisti - Mancano dettagli sui meccanismi di retry.
+* `[SI]` Linee guida azionabili per gli specialisti
 
 ## 2. Checklist — Coerenza con i requisiti PM
 * `[SI]` Task tecnici del PM indirizzabili dall'architettura
-* `[NO]` Acceptance criteria del PM supportati - Mancano i dettagli sull'implementazione del retry di Stripe.
+* `[SI]` Acceptance criteria del PM supportati
 * `[SI]` Assunzioni non contraddicono vincoli PM
 
 ## 3. Checklist — Qualità del design
-* `[NO]` Confini tra moduli chiari per gli specialisti - Necessitano di ridefinizione dettagliata.
-* `[NO]` Contratti con dettaglio sufficiente (campi, tipi, formati) - Mancano dettagli sui campi.
+* `[SI]` Confini tra moduli chiari per gli specialisti
+* `[NO]` Contratti con dettaglio sufficiente (campi, tipi, formati) - Definizioni incomplete nei contratti per API e eventi.
 * `[SI]` Pattern appropriato per worker
-* `[NO]` Aspetti cross-cutting indirizzati (sicurezza, logging, errori) - Log audit e sicurezza più espliciti.
+* `[SI]` Aspetti cross-cutting indirizzati (sicurezza, logging, errori)
 
 ## 4. Checklist — Qualità architetturale
 Ogni gate è critico (*).
 * `[SI]` IMPLEMENTABILITÀ: realizzabile con lo stack dichiarato
-* `[NO]` SCALABILITÀ: supporta crescita o vincoli esplicitati - Dettagli sulla scalabilità del sistema logistico necessari.
+* `[SI]` SCALABILITÀ: supporta crescita o vincoli esplicitati
 * `[SI]` TESTABILITÀ: layer testabili in isolamento
-* `[SI]` MODULARITÀ: responsabilità singola per componente
+* `[NO]` MODULARITÀ: responsabilità singola per componente - Alcuni componenti sembrano avere sovrapposizioni nelle responsabilità.
 * `[SI]` DISACCOPPIAMENTO: dipendenze unidirezionali, no circular
-* `[NO]` SICUREZZA: authn/authz, secret management, input validation - Dettagli su gestione segreti e validazione input mancanti.
+* `[SI]` SICUREZZA: authn/authz, secret management, input validation
 
 ## 5. Azioni richieste
-[PRIORITÀ ALTA] Dettagliare contratti tra moduli con specifiche su campi e formati.
-[PRIORITÀ MEDIA] Espandere le linee guida sui meccanismi di retry per gli specialisti.
-[PRIORITÀ ALTA] Assicurare scalabilità per il sistema logistico.
-[PRIORITÀ MEDIA] Migliorare la documentazione di sicurezza includendo gestione dei segreti e validazione input.
+[PRIORITÀ ALTA] Specificare i dettagli degli schemi degli eventi nel sistema RabbitMQ.
+[PRIORITÀ ALTA] Definire chiaramente i contratti API con campi e tipi completi.
+[PRIORITÀ MEDIA] Verificare e correggere eventuali sovrapposizioni di responsabilità tra i componenti dell'architettura.

@@ -3,52 +3,51 @@ VERSION: 1
 FINAL_STATUS: REJECTED  
 
 ## 1. Checklist — Copertura requisiti
-* [PARZIALE] Gli endpoint REST devono ricevere ordini con tutte le informazioni necessarie per l'elaborazione — La proposta menziona l'elaborazione, ma non dettaglia esplicitamente gli endpoint REST.
-* [SI] Stripe deve essere correttamente integrato e gestire correttamente i pagamenti, incluse situazioni di retry — L'integrazione con Stripe è descritta con handling di retry.
-* [SI] Il workflow di elaborazione ordine deve seguire la sequenza definita con meccanismi di compensazione operativi — Meccanismi di idempotenza e handling degli errori sono specificati.
-* [SI] RabbitMQ deve gestire efficacemente gli eventi asincroni di aggiornamento stato ordine — L'uso di RabbitMQ è centrale nella proposta.
-* [SI] L'integrazione logistica deve fornire correttamente il tracking delle spedizioni — Descritta nel modulo Integration Layer.
-* [PARZIALE] Notifiche devono essere inviate a ogni cambio di stato ordine — Menzionato, ma non dettagliato su tutti gli stati.
-* [NO] Le API di backoffice devono permettere la gestione degli ordini e dei rimborsi — Non sono descritte API di backoffice.
-* [NO] Il sistema di gestione magazzino deve scalare e ripristinare stock correttamente — Nessuna menzione specifica nella proposta.
+* [NO] Gli ordini possono essere ricevuti correttamente tramite le API e mostrati nel backoffice. — La proposta non descrive esplicitamente le API REST per la ricezione e la gestione degli ordini.
+* [SI] I pagamenti tramite Stripe devono essere processati correttamente e le transazioni risultare confermate o rifiutate. — Il modulo `payment_module.py` copre questa funzionalità.
+* [NO] Il sistema deve gestire i workflow di ordine end-to-end, inclusi fallimenti e retry. — Non ci sono dettagli sui workflow completi e sul loro recupero.
+* [SI] Gli eventi di stato ordine da RabbitMQ devono essere elaborati in tempo reale. — La proposta include la gestione degli eventi in tempo reale tramite RabbitMQ.
+* [NO] Gli stock di magazzino si aggiornano correttamente in base allo stato ordine. — Non ci sono dettagli sulla gestione del magazzino.
+* [NO] Le chiamate API sono protette con JWT e resistono a tentativi di accesso non autorizzato. — La proposta manca completamente di qualsiasi strategia di autenticazione e sicurezza JWT.
 
 ## 2. Checklist — Contratti API
-* [NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto — Non dettagliato nella proposta.
-* [NO] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario) — Nessuna specifica dettagliata fornita.
-* [NO] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme) — Non descritto.
-* [NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint — Non specificato.
-* [NO] La strategia di paginazione è definita per le liste (se applicabile) — Non menzionata.
+* [NO] Ogni endpoint ha metodo HTTP, path, request schema, response schema e esempio concreto.
+* [NO] Le regole di validazione sono esplicite per ogni campo (tipo, formato, obbligatorietà, regex ove necessario).
+* [NO] Il formato degli errori è consistente tra tutti gli endpoint (struttura JSON uniforme).
+* [NO] I codici HTTP di risposta (2xx, 4xx, 5xx) sono specificati per ogni endpoint.
+* [NO] La strategia di paginazione è definita per le liste (se applicabile).
 
 ## 3. Checklist — Business logic e scenari limite
-* [NO] I flussi principali sono descritti passo per passo (non solo a parole generiche) — Manca descrizione passo-passo dei flussi.
-* [SI] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition) — Sono considerati problemi di concorrenza.
-* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker) — Riprendi con backoff esponenziale e DLQ menzionati.
-* [NO] Le regole di business critiche sono esplicite e non ambigue — Mancano dettagli espliciti sulle regole di business.
+* [PARZIALE] I flussi principali sono descritti passo per passo (non solo a parole generiche). — Alcuni flussi sono accennati, ma mancano dettagli completi.
+* [NO] Gli scenari di concorrenza sono trattati (es. doppia registrazione, doppio click, race condition).
+* [SI] I casi di fallimento delle integrazioni esterne hanno una strategia (retry, fallback, circuit breaker). — Sono inclusi strategie di retry con backoff esponenziale e DLQ.
+* [PARZIALE] Le regole di business critiche sono esplicite e non ambigue. — Alcune regole sono definite, ma mancano quelle relative al magazzino e ricezione ordini.
 
 ## 4. Checklist — Persistenza e schema dati
-* [NO] Le tabelle/collezioni principali sono definite con i campi e i tipi — Non dettagliate.
-* [NO] Gli indici sono specificati per le colonne usate in query frequenti o join — Non menzionati.
-* [NO] I vincoli di unicità e foreign key sono dichiarati — Non specificati.
-* [NO] La strategia di migrazione dello schema è menzionata — Non descritta.
+* [PARZIALE] Le tabelle/collezioni principali sono definite con i campi e i tipi. — PostgreSQL è menzionato, ma manca una definizione dettagliata delle tabelle.
+* [NO] Gli indici sono specificati per le colonne usate in query frequenti o join.
+* [NO] I vincoli di unicità e foreign key sono dichiarati.
+* [NO] La strategia di migrazione dello schema è menzionata.
 
 ## 5. Checklist — Strategia di test
-* [SI] Esistono test per i happy path di ogni funzionalità principale — Test descritti per validation e integrazione.
-* [PARZIALE] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized) — Non completamente dettagliato.
-* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni) — Descritti i test di integrazione.
-* [PARZIALE] I test specificano input e expected output concreti (non generici) — Non completamente esplicitati.
+* [SI] Esistono test per i happy path di ogni funzionalità principale. — Test unitari sono menzionati.
+* [PARZIALE] Esistono test per i casi di errore critici (validazione fallita, not found, unauthorized). — Non esplicitato completamente nella proposta.
+* [SI] Esistono test di integrazione per le dipendenze esterne (DB, servizi esterni). — Test di integrazione sono menzionati.
+* [PARZIALE] I test specificano input e expected output concreti (non generici). — Manca la definizione esatta di input e output per i test.
 
 ## 6. Requisiti mancanti
-- Gestione delle API di backoffice per ordini e rimborsi.
-- Dettagli sul sistema di gestione magazzino.
+- API REST per la ricezione degli ordini e gestione backoffice.
+- Sicurezza basata su JWT.
+- Gestione del magazzino in relazione allo stato dell'ordine.
 
 ## 7. Rischi e problemi
-- **ALTA**: Mancanza di dettagli sugli endpoint API (area funzionale).
-- **MEDIA**: Integrazione parziale dei tracking e business logic esplicite (area funzionale).
+- Severità ALTA: Mancanza di sicurezza basata su JWT influenza area di sicurezza.
+- Severità ALTA: Mancanza di API REST definite influenza area di integrazione.
+- Severità MEDIA: Mancanza di dettagli su gestione del magazzino influenza area di gestione ordini.
 
 ## 8. Azioni richieste
-* [PRIORITÀ ALTA] Definire esplicitamente gli endpoint API con dettagli su HTTP method, schema delle richieste e risposte, e esempio concreto per ognuno.
-* [PRIORITÀ ALTA] Aggiungere specifiche dettagliate su gestione magazzino e funzionalità di API di backoffice.
-* [PRIORITÀ MEDIA] Specificare le strategie di paginazione e formato errori uniformi per le API.
-* [PRIORITÀ MEDIA] Presentare descrizioni passo-passo dei flussi principali.
-* [PRIORITÀ MEDIA] Fornire schema delle tabelle del database con specifica di tipi, indici e vincoli.
-
+- [PRIORITÀ ALTA] Definire e documentare le API REST inclusi metodo HTTP, path, schema richieste, risposte e gestione errori.
+- [PRIORITÀ ALTA] Implementare e integrare autenticazione JWT nel sistema.
+- [PRIORITÀ MEDIA] Descrivere dettagliatamente la gestione del magazzino in relazione allo stato dell'ordine.
+- [PRIORITÀ MEDIA] Dettagliare i contratti API con validazioni e codici HTTP.
+- [PRIORITÀ MEDIA] Aggiungere dettagli su gestione di concorrenza e persistenza dati con indici e migrazioni.
